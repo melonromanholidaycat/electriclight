@@ -1,0 +1,15 @@
+{
+  "name": "electriclight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LED guitar: effect language, simulator and firmware",
+  "scripts": {
+    "build": "node web/build.js",
+    "test": "node web/test/run.js",
+    "vectors": "node web/test/gen-vectors.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
+  }
+}
