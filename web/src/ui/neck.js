@@ -100,16 +100,18 @@ export class NeckView {
     // LEDs
     const px = engine.pixels;
     const r = Math.max(2.2, Math.min(this.w * 0.016, 5.5 * this.dpr));
-    // Positive pushes the strips clear of the board, negative sinks them into
-    // its edges the way side markers sit.
-    const inset = g.stripInset ?? 0.85;
-    const offset = r * 1.35 - inset * (r * 2.5);
+    // The strips sit a fixed number of millimetres either side of the centre
+    // line, so convert through the board's own width rather than guessing in
+    // pixels. The neck tapers, so the conversion changes down its length.
+    const offsetMm = g.stripOffset ?? 10;
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < px.length; i++) {
       const p = px[i];
       const y = L.y(p.mm);
       const half = L.half(p.mm);
-      const x = p.side === 0 ? L.cx - half - offset : L.cx + half + offset;
+      const halfMm = (g.nutWidth + (g.heelWidth - g.nutWidth) * (p.mm / L.lastMm)) / 2;
+      const dx = offsetMm * (half / halfMm);
+      const x = p.side === 0 ? L.cx - dx : L.cx + dx;
       const o = i * 3;
       const cr = out8[o], cg = out8[o + 1], cb = out8[o + 2];
       const lum = (cr + cg + cb) / 765;

@@ -2,7 +2,7 @@
 
 A Strat with two addressable LED strips down the neck, rebuilt around an
 ESP32-S3 so effects can be designed, edited and deployed over WiFi. See
-[`CLAUDE.md`](CLAUDE.md) for the project brief and the constraints behind it.
+[`AGENTS.md`](AGENTS.md) for the project brief and the constraints behind it.
 
 ## Where this is
 

@@ -76,6 +76,7 @@ export function saveLibrary(lib) {
 function migrate(lib) {
   const base = defaultLibrary();
   lib.geometry = { ...base.geometry, ...(lib.geometry || {}) };
+  delete lib.geometry.stripInset; // superseded by a measured stripOffset in mm
   lib.output = { ...base.output, ...(lib.output || {}) };
   lib.definitions = lib.definitions?.length ? lib.definitions : base.definitions;
   for (const b of base.definitions) {

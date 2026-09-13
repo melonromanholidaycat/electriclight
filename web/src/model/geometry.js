@@ -13,10 +13,10 @@ export const DEFAULT_GEOMETRY = {
   reversed: [false, false], // per side: does the strip run body -> nut?
   nutWidth: 43,         // mm, for drawing only
   heelWidth: 56,
-  // Where the strips actually sit across the neck: 0 beside the fretboard,
-  // 1 inset into its edges like side markers. Unverified - nobody has opened
-  // the guitar - and it changes only the drawing, never what an effect sees.
-  stripInset: 0.85,
+  // Measured: both strips run on the fretboard, about 10 mm either side of the
+  // centre line. Drawing only - lateral position is not something an effect can
+  // see, since effects address position along the neck.
+  stripOffset: 10,
 };
 
 // Distance from the nut to fret n, in mm.

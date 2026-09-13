@@ -442,7 +442,7 @@ const SETUP_FIELDS = [
   { key: 'geometry.ledsPerStrip', label: 'LEDs per strip', type: 'number', step: 1, min: 1, max: 120 },
   { key: 'geometry.mapping', label: 'LED spacing', type: 'select', options: [['fret-midpoint', 'One per fret space'], ['even', 'Evenly spaced']] },
   { key: 'geometry.firstFret', label: 'First LED sits above fret', type: 'number', step: 1, min: 0, max: 24 },
-  { key: 'geometry.stripInset', label: 'Strips: beside the neck .. inset in the fretboard', type: 'range', min: 0, max: 1, step: 0.01 },
+  { key: 'geometry.stripOffset', label: 'Strip offset from centre line (mm)', type: 'number', step: 0.5, min: 1, max: 40 },
   { key: 'geometry.reversed.0', label: 'Bass strip runs body to nut', type: 'check' },
   { key: 'geometry.reversed.1', label: 'Treble strip runs body to nut', type: 'check' },
 
