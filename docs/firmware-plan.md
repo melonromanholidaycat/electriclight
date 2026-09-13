@@ -58,8 +58,11 @@ The layout needs, at minimum:
 Size every partition with generous headroom. Unused flash costs nothing;
 repartitioning costs a cable and a borrowed computer.
 
-The embedded web UI is a single file of some tens of kilobytes, a quarter of
-that gzipped — `node web/build.js` prints the current figure. It grows.
+As built, the step 2 image is 871 KB against a 3 MB slot — **72% of the app
+partition is still free**, before there is any evaluator, LED driver or effect
+storage in it. The bootloader uses 36% of its own space. The embedded page is
+25 KB of that image, and `node web/build.js` prints the current figure. All of
+it grows; none of it is close.
 
 ## Pin budget
 
