@@ -2,13 +2,25 @@
 // two can never disagree about how a case is set up.
 
 import { Engine, FRAME_RATE, DEFAULT_OUTPUT } from '../src/model/engine.js';
-import { DEFAULT_GEOMETRY } from '../src/model/geometry.js';
 import { BUILTIN_DEFINITIONS } from '../src/model/effects.js';
 import { compile } from '../src/lang/compile.js';
 import { encodeProgram, toBase64 } from '../src/lang/serialize.js';
 import { FORMAT_VERSION } from '../src/lang/ops.js';
 
-const GEOMETRY = { ...DEFAULT_GEOMETRY, ledsPerStrip: 22, frets: 22 };
+// Pinned in full rather than spread from the defaults: these vectors are the
+// contract the firmware evaluator is held to, and they must not quietly change
+// because somebody adjusted a default.
+const GEOMETRY = {
+  scaleLength: 648,
+  frets: 22,
+  ledsPerStrip: 22,
+  mapping: 'even',
+  firstFret: 0,
+  reversed: [false, false],
+  nutWidth: 43,
+  heelWidth: 56,
+  stripSpacing: 30,
+};
 const OUTPUT = { ...DEFAULT_OUTPUT, brightnessCeiling: 1, currentBudget: 100000 };
 const FRAMES = [0, 1, 2, 5, 17, 59, 60, 121, 300];
 

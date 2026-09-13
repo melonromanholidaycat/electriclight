@@ -103,7 +103,7 @@ export class NeckView {
     // The strips sit a fixed number of millimetres either side of the centre
     // line, so convert through the board's own width rather than guessing in
     // pixels. The neck tapers, so the conversion changes down its length.
-    const offsetMm = g.stripOffset ?? 10;
+    const offsetMm = (g.stripSpacing ?? 30) / 2;
     ctx.globalCompositeOperation = 'lighter';
     for (let i = 0; i < px.length; i++) {
       const p = px[i];

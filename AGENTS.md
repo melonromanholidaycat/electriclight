@@ -47,10 +47,22 @@ permanent. Check every proposal against that.
 **Confirmed:** ESP32-S3 as the new controller, bought in threes so a brick is a
 board swap. Two LED strips in the neck. 6×AA in a rear cavity.
 
-Both strips run along the fretboard itself, roughly 10 mm either side of the
-centre line — not along the edges. That puts them only about 20 mm apart, so the
-neck reads mainly as a single line of light and per-side effects are a subtle
-split rather than two separate runs.
+Both strips are adhesive tape stuck to the face of the fretboard, out near its
+edges, just inside the outer strings — roughly 30 mm apart centre to centre.
+Photographs: [`docs/hardware/`](docs/hardware/). Being that far apart, they read
+as two distinct runs, so per-side effects carry.
+
+The tape is a 5 V three-wire addressable strip: the visible pads are 5V / GND /
+DI with data-direction arrows, and the LEDs are 5050 packages. That rules out
+12 V four-wire parts such as WS2815, and rules out RGBW. WS2812B remains the
+best guess, but SK6812 and WS2812B clones are externally identical, so the exact
+part is still unconfirmed.
+
+**It is a commercial fixed-pitch tape, so its LEDs are evenly spaced in
+millimetres and cannot be one per fret** — fret spacing is geometric and tape
+pitch is not. Near the nut a fret space may hold two LEDs; past the twelfth it
+may hold none. The simulator defaults to even spacing accordingly. The brief's
+"roughly one LED per fret" is true only as a rough average over the neck.
 
 **Chosen and worth preserving:** S3 over the cheaper C3 because the C3 lacks an
 FPU and is single-core, which would foreclose future signal-processing work. Costs
@@ -65,10 +77,14 @@ under load. Battery voltage sensing is cheap to add and worth having.
 **Not yet verified — he will open the guitar and report.** Do not design around
 assumptions here; ask:
 
-- LED strip type. WS2812B is suspected but unconfirmed.
-- Exact LED count per strip, and the spacing (roughly per-fret, not exactly).
+- **Exact LED count per strip.** With even spacing confirmed, this single number
+  fixes the whole geometry. It is the most valuable thing still missing.
+- Where the first and last LED sit relative to the nut and the last fret.
+- The exact strip part, if any marking on the reel or the tape says so.
 - What currently regulates the battery voltage down.
 - Existing wiring and connectors.
+- Whether the two strips are wired as one chain or two, and which end each is
+  fed from — that decides whether either needs reversing in the geometry.
 - Flash size on the ESP32-S3 boards, which fixes the partition layout and is
   one of the few things a cable is needed to change.
 

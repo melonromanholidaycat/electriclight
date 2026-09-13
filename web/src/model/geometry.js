@@ -8,15 +8,19 @@ export const DEFAULT_GEOMETRY = {
   scaleLength: 648,     // mm, 25.5" Strat scale
   frets: 22,
   ledsPerStrip: 22,
-  mapping: 'fret-midpoint', // or 'even'
+  // A commercial LED tape has a fixed pitch, so its LEDs are evenly spaced in
+  // millimetres and cannot line up with frets, which are not. 'fret-midpoint'
+  // stays available in case a strip was cut and re-spaced by hand.
+  mapping: 'even', // or 'fret-midpoint'
   firstFret: 0,         // index of the fret space holding LED 0
   reversed: [false, false], // per side: does the strip run body -> nut?
   nutWidth: 43,         // mm, for drawing only
   heelWidth: 56,
-  // Measured: both strips run on the fretboard, about 10 mm either side of the
-  // centre line. Drawing only - lateral position is not something an effect can
-  // see, since effects address position along the neck.
-  stripOffset: 10,
+  // Centre-to-centre distance between the two strips, in mm - the thing you can
+  // actually get a ruler across. They run on the fretboard, out near the edges,
+  // just inside the outer strings. Drawing only: effects address position along
+  // the neck and cannot see where a strip sits across it.
+  stripSpacing: 30,
 };
 
 // Distance from the nut to fret n, in mm.
