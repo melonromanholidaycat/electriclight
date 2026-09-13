@@ -7,15 +7,28 @@ ESP32-S3 so effects can be designed, edited and deployed over WiFi. See
 ## Where this is
 
 **Step 1 of 7: the simulator.** Everything here runs in a browser today. There
-is no firmware yet and no hardware has been opened.
+is no firmware yet. The guitar has been measured but not opened.
 
 ```
 web/src/lang/     the effect language: tokeniser, parser, compiler, bytecode evaluator
 web/src/model/    neck geometry, render engine, effect library
 web/src/ui/       canvas neck, knob, five-way switch
+web/build.js      inlines it all into one self-contained page
 web/test/         unit tests, golden vectors, browser smoke test
-docs/             the effect format specification
+docs/             specification, decisions, firmware plan, hardware photographs
 ```
+
+## The documents
+
+| | |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | the brief: constraints that drive every decision. Read first. |
+| [`docs/effect-format.md`](docs/effect-format.md) | what an effect is — the contract the firmware is held to |
+| [`docs/decisions.md`](docs/decisions.md) | why it is that way, what was rejected, and what would reopen it |
+| [`docs/firmware-plan.md`](docs/firmware-plan.md) | what must be true before and during the cabled session |
+| [`docs/hardware/`](docs/hardware/) | photographs and every measured number |
+
+`CLAUDE.md` points at `AGENTS.md`; they are not two documents.
 
 ## Running it
 
@@ -60,6 +73,16 @@ playable with no phone present.
 [`docs/effect-format.md`](docs/effect-format.md) is the specification the
 firmware will be written against.
 
+## The guitar
+
+21 frets on a 648 mm scale. Two separate 26-LED strips on the face of the
+fretboard, 27 mm apart, fed from the body end — so LED 0 sits at the last fret.
+20 mm clear of the nut, 20 mm short of the last fret, which works out to a
+16.61 mm pitch: a standard 60/m tape, and only consistent with a 21-fret neck.
+52 LEDs, 3.1 A at full white.
+
+[`docs/hardware/`](docs/hardware/) has the photographs and the arithmetic.
+
 ## Next
 
 2. CI plus a minimal firmware that boots, serves the page and takes an OTA update
@@ -68,3 +91,6 @@ firmware will be written against.
 5. Live control: the page detects the device, pushes and stores effects
 6. First cabled session — validate power and wiring with known-good firmware first
 7. Effect design, remotely, from then on
+
+[`docs/firmware-plan.md`](docs/firmware-plan.md) is what steps 2–6 have to get
+right, including the handful of things a cable is needed to change.

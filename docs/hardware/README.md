@@ -10,7 +10,9 @@ Photographs of the guitar as it stands, before the ESP32-S3 rebuild.
 What the close-up settles:
 
 - The strips are **adhesive tape on the face of the fretboard**, out near the
-  edges and just inside the outer strings — about 30 mm apart centre to centre.
+  edges and just inside the outer strings. Estimating the spacing off the
+  photograph gave about 30 mm; measuring it gave 27 mm, which is the figure in
+  use. Photographs establish arrangement, not dimensions.
 - The pads read **5V / GND / DI** with data-direction arrows, and the LEDs are
   5050 packages. So: a 5 V, three-wire, RGB addressable strip. Not WS2815
   (12 V, four wire), not RGBW. WS2812B or an externally identical equivalent.
@@ -28,6 +30,8 @@ What the close-up settles:
 | Nut to first LED | 20 mm |
 | Last LED to last fret | 20 mm |
 | Strip spacing | 27 mm centre to centre at the twelfth fret |
+| Frets | 21, counted |
+| Scale length | 648 mm (25.5"), assumed from the Strat body |
 
 ### What that arithmetic confirms
 
@@ -42,10 +46,10 @@ the numbers are right. The simulator shows the implied density on its Setup page
 for exactly this reason: if a future measurement makes it land somewhere strange,
 that is the measurement being wrong, not the tape.
 
+Both were confirmed: the neck has 21 frets, counted.
+
 ## Still to check
 
-- That the neck really has 21 frets. It is a five-second count and the pitch
-  arithmetic above leans on it.
 - The exact strip part, if the reel or tape carries a marking.
 - What currently regulates the battery voltage down.
 - Wiring, connectors, and the gauge of the run up the neck.

@@ -55,8 +55,9 @@ apart, they read as two distinct runs, so per-side effects carry.
 **Measured: 26 LEDs per strip, 52 in total.** 20 mm from the nut to the first
 LED, 20 mm from the last LED to the last fret. That works out to a 16.6 mm
 pitch — 60.2 LEDs per metre, which is a standard 60/m tape to within half a
-percent, and only if the neck has 21 frets. Two independent confirmations from
-one set of measurements, so the geometry can be trusted.
+percent, and only if the neck has 21 frets — since confirmed by counting. Two
+independent confirmations from one set of measurements, so the geometry can be
+trusted.
 
 **The two strips are separate, not daisy-chained, and both are fed from the body
 end**, where the controller lives. Three consequences for the rebuild:
@@ -99,8 +100,6 @@ under load. Battery voltage sensing is cheap to add and worth having.
 **Not yet verified — he will open the guitar and report.** Do not design around
 assumptions here; ask:
 
-- Confirmation that the neck has 21 frets — a five-second count, and the LED
-  pitch arithmetic above depends on it.
 - The exact strip part, if any marking on the reel or the tape says so.
 - What currently regulates the battery voltage down.
 - Existing wiring and connectors, and what gauge the run up the neck is.
@@ -131,6 +130,13 @@ added in a later session — that is the whole cost of keeping the door open.
 ## Architecture
 
 One repository holds the web UI, the firmware, and the CI pipeline.
+
+| document | what it answers |
+|---|---|
+| [`docs/effect-format.md`](docs/effect-format.md) | what an effect *is* — the spec the firmware is held to |
+| [`docs/decisions.md`](docs/decisions.md) | why it is that way, and what was rejected |
+| [`docs/firmware-plan.md`](docs/firmware-plan.md) | what must be true before and during the cabled session |
+| [`docs/hardware/`](docs/hardware/) | photographs and every measured number |
 
 **One web page, two contexts.** The same file is published to Pages as a standalone
 simulator and embedded in the firmware as the live control UI, detecting at runtime
@@ -172,9 +178,14 @@ These exist because the device becomes hard to reach once the guitar is closed:
 - Network fallback, so the guitar is always reachable even away from known WiFi.
 - Radio off unless deliberately enabled — saves power and stops anyone connecting
   mid-set. Safe mode must override this, or a bad config makes the guitar
-  unreachable from a phone.
+  unreachable from a phone, and safe mode must be reachable by a physical gesture
+  at boot since the knob and switch are the only inputs. Its fallback AP
+  credentials are compiled in and are the last way back, so choose them
+  deliberately.
 - A brightness ceiling enforced in software, tunable remotely. This is the most
   effective runtime control available, far more so than any hardware choice.
+- An automatic dim as the pack falls, driven by the battery sense — not just a
+  readout.
 - Refusal, with a clear message, of any effect using an opcode the firmware does
   not know — never silent misbehaviour.
 

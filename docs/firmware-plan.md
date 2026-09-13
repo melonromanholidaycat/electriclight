@@ -1,0 +1,188 @@
+# Firmware plan
+
+Nothing here is built yet. This is what has to be true before and during the
+cabled session, written down while it is fresh, because the session is scarce
+and the cost of arriving with the wrong module is a delay measured in weeks.
+
+The guiding rule from the brief: **anything that cannot be changed over WiFi is
+effectively permanent.** Most of this document is that rule applied.
+
+---
+
+## What actually needs a cable
+
+Short list, and it is worth keeping short:
+
+1. **The first flash.** Obviously.
+2. **The partition table.** Its *contents* update over the air; its *layout*
+   does not. Getting this wrong is the most expensive mistake available.
+3. **Anything physically miswired.**
+
+Everything else — effects, settings, geometry, brightness, WiFi credentials,
+the web UI itself — must be reachable over the air, or it is a design bug.
+
+## Flash and partitions
+
+**Buy or confirm 16 MB modules.** A 4 MB ESP32-S3 has to fit two OTA app slots,
+the embedded web UI and stored effects, and it will be tight enough to force bad
+choices later. 16 MB removes the question. If the boards on hand are 4 MB, that
+is worth knowing *before* the cabled session, not during it.
+
+The layout needs, at minimum:
+
+| partition | why |
+|---|---|
+| two OTA app slots | rollback after a bad image is non-negotiable |
+| `otadata` | which slot booted, and whether it is confirmed good |
+| NVS | settings, WiFi credentials, geometry, slot assignments |
+| a filesystem | effect definitions, presets, the log ring buffer |
+
+Size every partition with generous headroom. Unused flash costs nothing;
+repartitioning costs a cable and a borrowed computer.
+
+The embedded web UI is currently ~80 KB, around 20 KB gzipped. It grows.
+
+## Pin budget
+
+Now that both strips are confirmed as separate runs, the count is:
+
+| use | count | notes |
+|---|---|---|
+| LED data | 2 | one per strip, not daisy-chained |
+| potentiometer | 1 | analog |
+| five-way switch | 1 | analog, if it is a resistor ladder — otherwise up to 5 digital |
+| battery sense | 1 | analog, via a divider |
+| microphone (reserved) | 3 | I²S needs BCLK, WS and DATA. Not 2 — PDM needs two but locks you into worse parts |
+
+**The constraint that bites: ADC2 does not work while WiFi is active.** All
+three analog inputs must therefore be on **ADC1, which is GPIO1–GPIO10** on the
+ESP32-S3. That is ten pins for three jobs, so it is not tight, but putting the
+pot on an ADC2 pin would produce an intermittent fault that looks like a wiring
+problem and is not.
+
+Pins to keep clear:
+
+- **Strapping pins: GPIO0, GPIO3, GPIO45, GPIO46.** A pull-up or pull-down on
+  these changes boot behaviour.
+- **GPIO19 and GPIO20** are USB D− and D+ if native USB is used.
+- **On modules with octal PSRAM (the `R8` suffix), GPIO35–37 are consumed.**
+
+Verify all of this against the datasheet for the exact module before wiring
+anything. The five-way's electrical arrangement is still unknown and needs
+checking when the guitar is open.
+
+The S3's RMT peripheral has four TX channels, so two LED strips are comfortable.
+
+## Level shifting
+
+**Two channels, not one.** WS2812B at 5 V wants a logic high around 0.7 × VDD =
+3.5 V; the S3 drives 3.3 V. It often works and it is not dependable, especially
+as the data run up the neck is long.
+
+Options, roughly in order of preference:
+
+1. A proper shifter — a 74AHCT125 covers four channels, and both strips fit in
+   one chip.
+2. Run the strip at ~4.3 V instead of 5 V, which brings its threshold under the
+   S3's output. Costs a little brightness, saves a part.
+3. A sacrificial first LED as a shifter. Works, widely used, ugly, and it means
+   a dead first pixel is now a dead strip.
+
+## Power
+
+Worst case is **all 52 LEDs at full white: 3.1 A at 5 V**, about 15.6 W, which
+through a buck converter is roughly **2.5 A from a 7.2 V pack**.
+
+- Size the buck for the worst case with headroom. A 3 A module is not enough;
+  many cheap ones cannot hold 3 A in practice. A synchronous 5 A part is the
+  comfortable choice.
+- **AA holder spring contacts are a real series resistance at 2.5 A.** So are
+  thin wires up the neck. Cheap holders sag noticeably under load, and a sagging
+  supply is indistinguishable from a firmware fault when you cannot see a serial
+  port.
+- NiMH rather than alkaline — alkalines sag badly under this kind of load.
+- Bulk capacitance close to the strips, and proper decoupling at the board.
+  Radio transmission spikes can brown out an ESP32 that looks adequately
+  supplied at DC.
+
+Sizing hardware for the worst case is what keeps the **software brightness
+ceiling a comfort control rather than the only thing standing between the guitar
+and a brownout**. It is a remotely editable setting; it should not be
+load-bearing for safety.
+
+Battery sensing should drive an automatic dim as the pack falls, not just a
+readout.
+
+## Reachability, which is the thing that can strand the project
+
+The brief requires the radio off unless deliberately enabled. That saves power
+and stops anyone connecting mid-set, and it creates one hazard: if the only path
+to turning it on is stored configuration, then bad stored configuration makes
+the guitar unreachable from a phone.
+
+So:
+
+- **Safe mode must force the radio on**, ignoring stored config, with hardcoded
+  fallback AP credentials.
+- **Those credentials are effectively permanent.** They are compiled in and they
+  are the last way back. Choose them deliberately rather than letting a default
+  happen.
+- Safe mode must be reachable by a **physical gesture at boot** — the five-way
+  and the pot are the only inputs available, so some combination of them held at
+  power-on. Design it so it cannot be hit by accident on stage.
+
+On a known network, mDNS works from iOS Safari, so `something.local` is the
+friendly path. On the SoftAP fallback, iOS will complain about no internet and
+may try captive-portal detection; that is survivable but worth handling
+deliberately rather than discovering it in a car park.
+
+## Remote logging
+
+There is no serial monitor, so a log that only exists on a wire does not exist.
+A ring buffer in RAM served over HTTP is enough, and it must survive the thing
+it is diagnosing — which means it needs to be readable in safe mode too.
+
+## OTA
+
+- Two app slots, boot the new one, and **confirm it good only after a health
+  check passes**. An image that boots and then wedges must roll back on its own.
+- Manual firmware upload from the phone's Files app works in iOS Safari, so keep
+  that path available as a fallback when the normal one is broken.
+- Effect bytecode carries function indices. **Firmware must refuse an effect
+  using an index it does not know, naming the index**, never run it anyway. The
+  page is normally served by the device so the two ship together, but an effect
+  carried over from the Pages simulator is always from a newer build.
+
+## Cheap insurance before the guitar is closed
+
+**Route a USB-C pigtail or a small programming header into the rear cavity.** It
+does not help the phone, but it turns "borrow a laptop *and* disassemble the
+guitar" into "borrow a laptop". Given how much of this project's design bends
+around scarce cable access, it is the best few euros available.
+
+## Cabled session checklist
+
+In order, and the order matters:
+
+1. **Validate the hardware with known-good third-party firmware first** — WLED
+   or similar. Power, wiring, strip type, LED count and direction all get
+   confirmed before any custom code is in the picture. Debugging your own
+   firmware against unverified wiring is the slowest possible loop.
+2. Check supply voltage **under load**, not at idle, at the far end of the neck.
+3. Confirm both strips independently, and confirm the data direction — index 0
+   is expected at the *last fret*, not the nut.
+4. Flash the real firmware and **verify OTA works on the bench, before closing
+   the guitar**. An OTA path that has never been exercised is not a path.
+5. Verify safe mode entry by its physical gesture, also before closing.
+6. Flash all three boards, so a brick is a swap rather than another session.
+
+## Known issues to handle later
+
+- **Stored settings win over new defaults.** That is correct — a firmware update
+  must never silently rewrite someone's library — but it means corrected
+  hardware facts need an explicit reset. When the device stores the library
+  (step 5), this needs a real answer: probably a versioned hardware-facts block
+  that is separate from user content and may be updated by the firmware, while
+  effects and presets are never touched.
+- **Appending an opcode is backward compatible for decoding but not for
+  execution.** See the refusal requirement above.

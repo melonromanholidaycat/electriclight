@@ -1,0 +1,200 @@
+# Decisions
+
+Why things are the way they are, and what was rejected on the way. The point of
+this file is that nobody has to re-litigate a settled choice from scratch — and
+that when one *should* be reopened, the trigger for doing so is written down.
+
+[`effect-format.md`](effect-format.md) is the specification. This is the
+reasoning behind it.
+
+---
+
+## The effect format is an expression language, not a catalogue of effects
+
+**Chosen:** an effect is a few formulas evaluated per pixel, compiled in the
+browser to ~30 opcodes of bytecode that the firmware executes.
+
+**Rejected:**
+
+- *A catalogue of built-in kernels* (`{type:"comet", speed:1.2}`). Smallest
+  interpreter and the nicest UI, but every new kind of effect is another kernel
+  written twice, in C++ and in JavaScript. This is the WLED model, and it is why
+  WLED is an enormous C++ codebase.
+- *A layered compositor* — generators, blend modes, masks. Genuinely pleasant to
+  use and it answers the layering question directly, but the generator set still
+  lives in firmware, so it has the catalogue's ceiling with a much larger UI to
+  build. Its data shape is reserved; see below.
+- *A hybrid* of the two. Best ceiling, most work, two mental models, and the
+  real risk that the simulator never ships.
+- *Real code — Lua or WASM.* You would still need an authoring language to
+  produce it from a phone, so you end up designing the expression language
+  anyway, having first paid for a ~100 KB runtime and lost float determinism.
+
+**Why:** the metric that matters is not expressiveness, it is **parity surface** —
+how much has to be implemented twice and stay bit-compatible forever. The brief
+names simulator/device drift as the main failure mode. Every rejected option's
+parity surface grows as effects are added. This one's does not: one evaluator,
+~30 opcodes, constant.
+
+The secondary benefit is that adding an effect never means reflashing. Firmware
+updates do go over the air, so that is convenience rather than necessity — but
+convenience measured in seconds instead of a CI build, an OTA push and the risk
+that comes with one.
+
+**What would reopen it:** if authoring expressions turns out to be the wrong
+interface even for someone comfortable with maths, the catalogue model is the
+fallback — but see the definition/preset split, which exists to make that
+unnecessary.
+
+## The compiler lives in the browser; only the evaluator ships
+
+The parser and compiler are written once, in JavaScript. The firmware receives
+bytecode and never parses source; it stores source as an opaque blob so the
+editor can show it again.
+
+This is what keeps the parity surface small. A parser is the fiddly part and now
+exists once. An evaluator is mechanical and testable against golden vectors.
+
+## Definitions and presets are different things
+
+A **definition** is the maths plus a parameter schema. A **preset** is a named
+set of values for it.
+
+The brief says the owner does not want to write or hand-edit code, and also that
+effects must be data so that adding one never means reflashing. Those pull
+against each other only if "effect" is one thing. Split in two, definitions are
+authored in maths and shipped as data with no reflash, and presets are made by
+dragging sliders on a phone. This is also the answer to "how many parameters,
+and should they be named and typed" — **named, typed and range-bounded, always**,
+because the schema is the entire interface between the maths and the playing.
+
+Presets are grouped under their definition in the library, at the owner's
+request.
+
+## The five-way selects slots; it is not an input to effects
+
+Position 1–5 maps to five stored slots, directly. Each slot also says what the
+knob does there — master brightness by default, or any one named parameter.
+
+`sw` is readable from inside an effect, but nothing in the stock library uses
+it. Predictable beats clever mid-set: "what is position 3?" should have a
+one-word answer, and the guitar has to stay fully playable with no phone.
+
+## Effects get both fret position and physical position
+
+`fret` is the fractional fret number; `u` is normalised physical distance.
+
+Fret spacing is geometric, `d(n) = L·(1 − 2^(−n/12))`. LED spacing is a fixed
+tape pitch. **These are genuinely different coordinate systems on this
+instrument** — confirmed once the strip turned out to be a 60/m tape — so a wave
+travelling at constant speed in `u` and the same wave stepping through `fret`
+are different effects. Offering only one would silently foreclose half of what a
+neck can do.
+
+`warp()` came later, at the owner's suggestion, to squeeze or stretch a pattern
+anywhere along the neck without reference to frets at all.
+
+## warp lives inside effects, not in the engine
+
+A global warp applied to `u` before effects saw it would be free for every
+effect and tunable in one place.
+
+**Why not:** it would blur two different things — how the LEDs are actually
+spaced (calibration, measurable) and how squashed a pattern should look
+(artistic, per preset). Kept apart, a neck that looks wrong is unambiguously one
+or the other.
+
+**What would reopen it:** if in practice every effect wants the same squeeze,
+that is evidence the warp belongs in the instrument rather than the effect.
+
+## Effects can read one frame of their own history
+
+`prev` is the pixel's own `v` from the previous frame. Without it an effect is a
+pure function of position and time and cannot do trails, decay or fire. One
+float per pixel buys a whole class of effects.
+
+## The effect clock is fixed at 60 Hz on both sides
+
+Because `prev` exists, a variable frame rate would make every trail behave
+differently on the device than in the simulator — exactly the drift this project
+is designed against. Both step whole 1/60 s frames; the simulator drops or
+repeats frames rather than scaling time. It is also what makes golden vectors
+possible at all.
+
+## Arithmetic is pinned, not left to the platform
+
+float32 everywhere; division or modulo by zero yields 0; non-finite results of
+divisions and calls collapse to 0; `mod` is GLSL-style. A NaN pixel is far worse
+than a wrong one, and the two evaluators have to agree.
+
+float32 is free on the S3 because it has an FPU — which retroactively justifies
+choosing it over the C3.
+
+## The knob goes in before gamma, the ceiling after
+
+`effect → knob → gamma → brightness ceiling → current limit → 8-bit`.
+
+A player turning the knob down wants a *perceptual* dim, which is the pre-gamma
+side. The ceiling is a *power* control: half the ceiling must mean half the
+current, which is only true on the linear side. None of it is reachable from an
+effect, so no effect can brown out the board or cook the pack.
+
+## Presets store a list of layers that nothing yet creates
+
+Every preset holds `layers: [...]` with exactly one entry, each with a mask and
+a blend mode. Masks and the `normal`/`add`/`max` blends are implemented and
+tested.
+
+Layering is the one part of the format that is expensive to retrofit — the
+simulator, the firmware and the storage format are all written against the
+top-level shape. Reserving it now is nearly free; adding a second layer later
+becomes a UI change. Still open: whether layering is wanted at all.
+
+## LEDs are evenly spaced, not one per fret
+
+The strips are continuous commercial tape, so their pitch is fixed in
+millimetres and cannot track frets. The brief's "roughly one LED per fret" is
+true only as an average. `fret-midpoint` mapping stays available in case a strip
+is ever cut and re-spaced by hand.
+
+## Geometry is expressed in units you can measure
+
+Strip spacing is centre-to-centre in millimetres, because that is what a ruler
+gives — not an offset from a centre line, and not a dimensionless inset. Two
+earlier parameterisations were replaced for exactly this reason. The Setup page
+derives the implied LED density and says so, so a mismeasurement announces
+itself rather than quietly skewing every effect.
+
+## The page is one self-contained file
+
+Sources are ES modules so node can unit-test them; `web/build.js` inlines them
+in a hand-maintained order into a single HTML file with no external requests.
+
+One artefact means the Pages copy and the on-device copy cannot be different
+builds of different pieces, and the firmware embeds one gzipped blob rather than
+serving a tree. The module order being hand-maintained is the cost; the build
+fails loudly if it is wrong.
+
+## Golden vectors are the contract, not a regression test
+
+`web/test/vectors.json` holds the exact 8-bit output of every built-in effect at
+chosen frames, plus a synthetic case that exercises the arithmetic edges. The
+firmware evaluator will be held to it: base64 bytecode in, identical pixels out.
+Its geometry is pinned in full rather than spread from the defaults, so the
+contract cannot drift when someone adjusts a default.
+
+Regenerating it is `npm run vectors`, and the diff must be read. A vector that
+changes unintentionally is the firmware and the simulator about to disagree.
+
+## CI enables Pages itself
+
+`configure-pages` is given `enablement: true` so the first run turns Pages on
+over the API. The owner has a phone and no computer; every settings page he does
+not have to find is worth the line of YAML.
+
+## The trunk is not called main
+
+The repository was empty when the first branch was pushed, so GitHub made
+`claude/led-guitar-brief-wrjr81` the default branch. CI keys its deploy off the
+repository's actual default branch rather than a hardcoded name, so renaming it
+in settings would need no code change.
