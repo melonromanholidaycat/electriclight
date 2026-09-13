@@ -32,10 +32,7 @@ node web/test/smoke.mjs
 ```
 
 CI runs all three on every push. On the default branch it also publishes
-`dist/index.html` to GitHub Pages.
-
-**One manual step, once:** in the repository settings, under Pages, set the
-source to *GitHub Actions*. Nothing publishes until that is done.
+`dist/index.html` to GitHub Pages, enabling Pages itself on the first run.
 
 ## The two contexts
 
