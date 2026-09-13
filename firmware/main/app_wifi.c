@@ -155,7 +155,7 @@ void app_wifi_ip_string(char *out, size_t max)
         snprintf(out, max, IPSTR, IP2STR(&s_ip.ip));
     } else if (s_mode == APP_WIFI_FALLBACK) {
         snprintf(out, max, "192.168.4.1");
-    } else {
-        snprintf(out, max, "");
+    } else if (max > 0) {
+        out[0] = '\0';
     }
 }
