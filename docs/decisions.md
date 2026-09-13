@@ -28,7 +28,7 @@ browser to ~30 opcodes of bytecode that the firmware executes.
   real risk that the simulator never ships.
 - *Real code — Lua or WASM.* You would still need an authoring language to
   produce it from a phone, so you end up designing the expression language
-  anyway, having first paid for a ~100 KB runtime and lost float determinism.
+  anyway, having first paid for a sizable runtime and lost float determinism.
 
 **Why:** the metric that matters is not expressiveness, it is **parity surface** —
 how much has to be implemented twice and stay bit-compatible forever. The brief
@@ -48,12 +48,9 @@ unnecessary.
 
 ## The compiler lives in the browser; only the evaluator ships
 
-The parser and compiler are written once, in JavaScript. The firmware receives
-bytecode and never parses source; it stores source as an opaque blob so the
-editor can show it again.
-
-This is what keeps the parity surface small. A parser is the fiddly part and now
-exists once. An evaluator is mechanical and testable against golden vectors.
+**Why:** it is what keeps the parity surface small. A parser is the fiddly part,
+and this way it is written once. An evaluator is mechanical and testable against
+golden vectors, which a parser is not.
 
 ## Definitions and presets are different things
 
@@ -73,12 +70,13 @@ request.
 
 ## The five-way selects slots; it is not an input to effects
 
-Position 1–5 maps to five stored slots, directly. Each slot also says what the
-knob does there — master brightness by default, or any one named parameter.
+**Rejected:** feeding the switch position to effects as an input, which is more
+flexible and would have needed no slot machinery.
 
-`sw` is readable from inside an effect, but nothing in the stock library uses
-it. Predictable beats clever mid-set: "what is position 3?" should have a
-one-word answer, and the guitar has to stay fully playable with no phone.
+**Why:** predictable beats clever mid-set. "What is position 3?" should have a
+one-word answer, and the guitar has to stay fully playable with no phone. `sw`
+is still readable from inside an effect for anyone who wants it; nothing in the
+stock library does.
 
 ## Effects get both fret position and physical position
 
@@ -86,7 +84,7 @@ one-word answer, and the guitar has to stay fully playable with no phone.
 
 Fret spacing is geometric, `d(n) = L·(1 − 2^(−n/12))`. LED spacing is a fixed
 tape pitch. **These are genuinely different coordinate systems on this
-instrument** — confirmed once the strip turned out to be a 60/m tape — so a wave
+instrument** — confirmed once the strip turned out to be ordinary tape — so a wave
 travelling at constant speed in `u` and the same wave stepping through `fret`
 are different effects. Offering only one would silently foreclose half of what a
 neck can do.
@@ -109,17 +107,17 @@ that is evidence the warp belongs in the instrument rather than the effect.
 
 ## Effects can read one frame of their own history
 
-`prev` is the pixel's own `v` from the previous frame. Without it an effect is a
-pure function of position and time and cannot do trails, decay or fire. One
-float per pixel buys a whole class of effects.
+**Why:** without it an effect is a pure function of position and time, which
+rules out trails, decay and fire entirely. One float per pixel buys back that
+whole class. The cost is that the frame rate then has to be fixed — see below.
 
-## The effect clock is fixed at 60 Hz on both sides
+## The effect clock runs at a fixed rate on both sides
 
 Because `prev` exists, a variable frame rate would make every trail behave
 differently on the device than in the simulator — exactly the drift this project
-is designed against. Both step whole 1/60 s frames; the simulator drops or
-repeats frames rather than scaling time. It is also what makes golden vectors
-possible at all.
+is designed against. Both step whole frames at the rate fixed in
+[`effect-format.md`](effect-format.md); the simulator drops or repeats frames
+rather than scaling time. It is also what makes golden vectors possible at all.
 
 ## Arithmetic is pinned, not left to the platform
 
@@ -150,12 +148,15 @@ simulator, the firmware and the storage format are all written against the
 top-level shape. Reserving it now is nearly free; adding a second layer later
 becomes a UI change. Still open: whether layering is wanted at all.
 
-## LEDs are evenly spaced, not one per fret
+## Even LED spacing is the default mapping
 
-The strips are continuous commercial tape, so their pitch is fixed in
-millimetres and cannot track frets. The brief's "roughly one LED per fret" is
-true only as an average. `fret-midpoint` mapping stays available in case a strip
-is ever cut and re-spaced by hand.
+**Why:** the strips are continuous commercial tape, so the pitch is fixed in
+millimetres and physically cannot track frets. This was assumed the other way
+round at first, on the strength of the brief's opening line, and the photographs
+corrected it.
+
+`fret-midpoint` mapping stays available in case a strip is ever cut and re-spaced
+by hand, which is the only way the other mapping could become true.
 
 ## Geometry is expressed in units you can measure
 

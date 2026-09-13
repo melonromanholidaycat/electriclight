@@ -5,40 +5,25 @@ it, and the golden vectors in `web/test/vectors.json` are what proves they agree
 
 ## Why it is shaped this way
 
-The failure mode this project is most exposed to is the simulator drifting away
-from the device. So the thing to minimise is not how expressive effects can be,
-it is **how much has to be implemented twice**.
-
-A catalogue of built-in effect kernels grows that surface forever: every new
-effect is another kernel to write in C++ and again in JavaScript, and every one
-is another chance for the two to disagree. An expression language does not. The
-parser and compiler live only in the browser; the firmware receives bytecode and
-runs a stack machine over a fixed set of about thirty opcodes. That surface is
-**bounded and constant**: it does not grow when effects are added.
-
-The other consequence is that adding an effect never means reflashing. Firmware
-updates do go over the air, so that is a convenience rather than a necessity —
-but a convenience measured in seconds instead of a CI build, an OTA push and the
-risk that comes with one.
+In one line: the choice was driven by how much has to be implemented twice and
+stay bit-compatible forever, not by how expressive effects could be. The
+alternatives that lost, and what would reopen any of this, are in
+[`decisions.md`](decisions.md).
 
 ## Two things, not one
 
-**A definition** is the maths plus a parameter schema. Written in the language
-below. Changing one is programming.
+**A definition** is the maths plus a parameter schema, written in the language
+below. Parameters are named, typed and range-bounded; values are clamped to
+their declared range on the way in.
 
-**A preset** is a name and a set of values for that definition's parameters.
-Made by dragging sliders. Presets are grouped under their definition in the
-library, and a preset is what a switch position points at.
-
-This split is why parameters are named, typed and range-bounded rather than
-generic: the schema is the entire interface between someone who writes maths and
-someone who is playing a guitar.
+**A preset** is a name and a set of values for one definition's parameters.
+Presets are grouped under their definition in the library, and a preset is what
+a switch position points at.
 
 ## The five-way and the knob
 
 The switch selects one of five **slots** directly. It is not an input to the
-effect. Predictable beats clever when you are mid-set, and "what is position 3?"
-should have a one-word answer.
+effect.
 
 Each preset says what the knob does: master brightness by default, or any one of
 that effect's named parameters. `knob` and `sw` are also readable from inside an
@@ -83,15 +68,14 @@ preset can never push an effect somewhere it was not designed to go.
 | `prev` | this pixel's `v` on the previous frame |
 | `rnd` | a fixed random per pixel, 0..1 |
 
-**`fret` and `u` are both here on purpose.** Fret spacing is geometric —
-`d(n) = L·(1 − 2^(−n/12))` — so a wave travelling at constant speed in `u` and
-the same wave stepping through `fret` are completely different effects. Offering
-only one of them would silently foreclose half of what a neck can do. The
-*Standing Wave* effect has a slider that crossfades between them, which is the
-quickest way to see the difference.
+`fret` and `u` are separate because fret spacing is geometric —
+`d(n) = L·(1 − 2^(−n/12))` — while LED spacing is a fixed tape pitch, so a wave
+travelling at constant speed in `u` and the same wave stepping through `fret`
+are different effects. The *Standing Wave* effect crossfades between them, which
+is the quickest way to see it.
 
-`prev` is what makes trails, decay and fire possible. Without it an effect is a
-pure function of position and time and cannot remember anything.
+`prev` is the only state an effect has: one frame, one float per pixel, and it
+is why the clock rate is fixed rather than free-running.
 
 ### Operators
 
@@ -118,18 +102,10 @@ of 0 is the identity. Positive `amount` bunches a pattern together around
 `centre` and stretches it at the ends; negative does the reverse. Inputs outside
 0..1 are clamped.
 
-It knows nothing about frets. That is the point: squeezing part of the neck is
-useful whether or not the LEDs line up with anything, so it is a plain
-coordinate warp and the effect decides what to feed it — physical position, fret
-position, or a crossfade of the two.
-
-**Why it lives in effects rather than in the engine.** A global warp applied to
-`u` before effects saw it would be free for every effect and tunable in one
-place. It was not done that way because it would blur two different things: how
-the LEDs are actually spaced (calibration, measured once the guitar is open) and
-how squashed you want a pattern to look (artistic, per preset). With them
-separate, a neck that looks wrong is unambiguously one or the other. This is
-worth revisiting once the real LED positions are known.
+It knows nothing about frets: it is a plain coordinate warp, and the effect
+decides what to feed it — physical position, fret position, or a crossfade. It
+belongs to the effect rather than to the engine; see
+[`decisions.md`](decisions.md).
 
 Implementation, which both evaluators must match exactly:
 
@@ -156,9 +132,9 @@ two evaluators have to agree bit for bit.
 
 ### The clock is fixed at 60 Hz
 
-Effects can read their own previous frame, so a variable frame rate would make
-trails behave differently on the device than in the simulator. Both step whole
-1/60 s frames. The simulator drops or repeats frames rather than scaling time.
+Both implementations step whole 1/60 s frames. The simulator drops or repeats
+frames rather than scaling time; it never scales `t` to a real frame interval.
+This is required because effects can read their own previous frame.
 
 ## The output chain
 
@@ -168,12 +144,10 @@ Applied after the effect, and unreachable from inside it:
 effect v -> knob (if bound to brightness) -> gamma -> brightness ceiling -> current limit -> 8-bit
 ```
 
-The knob goes in **before** gamma because a player turning it down wants a
-perceptual dim. The ceiling goes in **after**, because it is a power control:
-half the ceiling has to mean half the current, which is only true on the linear
-side of gamma. The current limiter then scales the whole frame to fit the
-configured budget. An effect can therefore never brown out the board or cook the
-pack, whatever it computes.
+The knob goes in before gamma and the ceiling after it; the current limiter then
+scales the whole frame to fit the configured budget. An effect can therefore
+never brown out the board or cook the pack, whatever it computes. Why that
+order: [`decisions.md`](decisions.md).
 
 ## Bytecode
 
@@ -213,11 +187,9 @@ A preset stores a **list** of layers, each with a definition, values, a mask
 (fret range and sides) and a blend mode. Nothing in v1 creates more than one
 layer, and the UI does not expose them.
 
-The shape is reserved now because it is the one part of the format that is
-genuinely expensive to retrofit: the simulator, the firmware and the storage
-format are all written against it. Adding a second layer later is then a UI
-change. `normal`, `add` and `max` blends and mask evaluation are already
-implemented and tested, so the path is real rather than theoretical.
+`normal`, `add` and `max` blends and mask evaluation are already implemented and
+tested, so the path is real rather than theoretical. Why the shape is reserved
+rather than added later: [`decisions.md`](decisions.md).
 
 ## Changing any of this
 

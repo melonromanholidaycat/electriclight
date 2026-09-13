@@ -2,6 +2,13 @@
 
 Photographs of the guitar as it stands, before the ESP32-S3 rebuild.
 
+**This file is the only home for measured numbers.** Every other document links
+here rather than restating them, because a number written down twice is a number
+that will disagree with itself within a month. The measurement table below is
+parsed by `web/test/run.js` and checked against the simulator's defaults in
+`web/src/model/geometry.js`, so the code cannot drift from it either: change a
+figure here and the build fails until the code agrees.
+
 | file | what it shows |
 |---|---|
 | `guitar-front.jpg` | the whole instrument, both strips running the length of the neck |
@@ -22,16 +29,19 @@ What the close-up settles:
 
 ## Measured
 
-| | |
-|---|---|
-| LEDs per strip | 26 (52 total) |
-| Strips | two separate runs, not daisy-chained |
-| Signal direction | body to nut, so electrical index 0 is at the last fret |
-| Nut to first LED | 20 mm |
-| Last LED to last fret | 20 mm |
-| Strip spacing | 27 mm centre to centre at the twelfth fret |
-| Frets | 21, counted |
-| Scale length | 648 mm (25.5"), assumed from the Strat body |
+The rows with a `key` are read by the test. Keep the key, and put the number
+first in the value.
+
+| measurement | value | key |
+|---|---|---|
+| LEDs per strip | 26 (52 in total) | `ledsPerStrip` |
+| Frets | 21, counted | `frets` |
+| Scale length | 648 mm (25.5"), assumed from the Strat body | `scaleLength` |
+| Nut to first LED | 20 mm | `nutToFirstLed` |
+| Last LED to last fret | 20 mm | `lastLedToLastFret` |
+| Strip spacing, centre to centre at the twelfth fret | 27 mm | `stripSpacing` |
+| Strips | two separate runs, not daisy-chained | |
+| Signal direction | body to nut, so electrical index 0 is at the last fret | |
 
 ### What that arithmetic confirms
 
@@ -50,7 +60,14 @@ Both were confirmed: the neck has 21 frets, counted.
 
 ## Still to check
 
+Open until the guitar is opened. Nothing should be designed around an assumption
+where one of these is missing.
+
 - The exact strip part, if the reel or tape carries a marking.
 - What currently regulates the battery voltage down.
 - Wiring, connectors, and the gauge of the run up the neck.
-- How the pot and five-way are wired, and the five-way's resistor ladder.
+- Whether the pot and five-way are wired to the existing controls or to
+  dedicated ones, and what the five-way's resistor ladder looks like.
+- Flash size on the ESP32-S3 boards. It fixes the partition layout, which is one
+  of the few things a cable is needed to change — see
+  [`../firmware-plan.md`](../firmware-plan.md).

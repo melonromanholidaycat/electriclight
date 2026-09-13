@@ -20,15 +20,16 @@ docs/             specification, decisions, firmware plan, hardware photographs
 
 ## The documents
 
-| | |
+| | authoritative for |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | the brief: constraints that drive every decision. Read first. |
+| [`docs/hardware/`](docs/hardware/) | photographs, and every measured number |
 | [`docs/effect-format.md`](docs/effect-format.md) | what an effect is — the contract the firmware is held to |
 | [`docs/decisions.md`](docs/decisions.md) | why it is that way, what was rejected, and what would reopen it |
-| [`docs/firmware-plan.md`](docs/firmware-plan.md) | what must be true before and during the cabled session |
-| [`docs/hardware/`](docs/hardware/) | photographs and every measured number |
+| [`docs/firmware-plan.md`](docs/firmware-plan.md) | electrical consequences, and what the cabled session must get right |
 
-`CLAUDE.md` points at `AGENTS.md`; they are not two documents.
+Each fact has exactly one home; the others link to it rather than restating it.
+`CLAUDE.md` is a pointer to `AGENTS.md`, not a second document.
 
 ## Running it
 
@@ -75,22 +76,21 @@ firmware will be written against.
 
 ## The guitar
 
-21 frets on a 648 mm scale. Two separate 26-LED strips on the face of the
-fretboard, 27 mm apart, fed from the body end — so LED 0 sits at the last fret.
-20 mm clear of the nut, 20 mm short of the last fret, which works out to a
-16.61 mm pitch: a standard 60/m tape, and only consistent with a 21-fret neck.
-52 LEDs, 3.1 A at full white.
+A Strat with two separate strips of ordinary addressable tape stuck to the face
+of the fretboard, both fed from the body end — so LED 0 sits at the last fret,
+not the nut. Being commercial tape, the LEDs are evenly spaced in millimetres
+and do not line up with frets.
 
-[`docs/hardware/`](docs/hardware/) has the photographs and the arithmetic.
+[`docs/hardware/`](docs/hardware/) holds the photographs, every measured number,
+and the arithmetic that cross-checks them. It is the only place those numbers
+live; the simulator's defaults are held to it by a test.
 
 ## Next
 
-2. CI plus a minimal firmware that boots, serves the page and takes an OTA update
-3. Safe mode, remote logging, network fallback, recovery from a bad image
-4. The bytecode evaluator in C++, checked against `web/test/vectors.json`
-5. Live control: the page detects the device, pushes and stores effects
-6. First cabled session — validate power and wiring with known-good firmware first
-7. Effect design, remotely, from then on
+Firmware: boot, serve the page, take an update over the air, survive a bad one,
+then the effect evaluator in C++ checked against `web/test/vectors.json`, then
+live control from the page. Hardware last, because a cabled session is scarce
+and everything before it can be proven green in CI without one.
 
-[`docs/firmware-plan.md`](docs/firmware-plan.md) is what steps 2–6 have to get
-right, including the handful of things a cable is needed to change.
+The numbered sequence is in [`AGENTS.md`](AGENTS.md); what those steps have to
+get right is [`docs/firmware-plan.md`](docs/firmware-plan.md).

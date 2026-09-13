@@ -40,11 +40,12 @@ The layout needs, at minimum:
 Size every partition with generous headroom. Unused flash costs nothing;
 repartitioning costs a cable and a borrowed computer.
 
-The embedded web UI is currently ~80 KB, around 20 KB gzipped. It grows.
+The embedded web UI is a single file of some tens of kilobytes, a quarter of
+that gzipped — `node web/build.js` prints the current figure. It grows.
 
 ## Pin budget
 
-Now that both strips are confirmed as separate runs, the count is:
+Both strips are separate runs, so:
 
 | use | count | notes |
 |---|---|---|
@@ -90,8 +91,9 @@ Options, roughly in order of preference:
 
 ## Power
 
-Worst case is **all 52 LEDs at full white: 3.1 A at 5 V**, about 15.6 W, which
-through a buck converter is roughly **2.5 A from a 7.2 V pack**.
+Worst case is **every LED at full white: 3.1 A at 5 V**, about 15.6 W, which
+through a buck converter is roughly **2.5 A from a 7.2 V pack**. (LED counts and
+every other measurement: [`hardware/`](hardware/).)
 
 - Size the buck for the worst case with headroom. A 3 A module is not enough;
   many cheap ones cannot hold 3 A in practice. A synchronous 5 A part is the
@@ -105,13 +107,10 @@ through a buck converter is roughly **2.5 A from a 7.2 V pack**.
   Radio transmission spikes can brown out an ESP32 that looks adequately
   supplied at DC.
 
-Sizing hardware for the worst case is what keeps the **software brightness
-ceiling a comfort control rather than the only thing standing between the guitar
-and a brownout**. It is a remotely editable setting; it should not be
-load-bearing for safety.
-
-Battery sensing should drive an automatic dim as the pack falls, not just a
-readout.
+The brightness ceiling is a remotely editable setting, so it should not end up
+load-bearing for safety — which is the point of sizing the hardware for the
+worst case rather than for the expected one. The automatic dim the brief
+requires needs the battery divider on an ADC1 pin, per the budget above.
 
 ## Reachability, which is the thing that can strand the project
 
@@ -148,10 +147,11 @@ it is diagnosing — which means it needs to be readable in safe mode too.
   check passes**. An image that boots and then wedges must roll back on its own.
 - Manual firmware upload from the phone's Files app works in iOS Safari, so keep
   that path available as a fallback when the normal one is broken.
-- Effect bytecode carries function indices. **Firmware must refuse an effect
-  using an index it does not know, naming the index**, never run it anyway. The
-  page is normally served by the device so the two ship together, but an effect
-  carried over from the Pages simulator is always from a newer build.
+- Effect bytecode carries function indices, and firmware must refuse an effect
+  using one it does not know rather than run it anyway. The rule and its reason
+  are in [`effect-format.md`](effect-format.md#bytecode); it matters here because
+  an effect carried over from the Pages simulator is always from a newer build
+  than the device.
 
 ## Cheap insurance before the guitar is closed
 

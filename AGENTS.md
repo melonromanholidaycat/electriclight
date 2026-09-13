@@ -47,45 +47,23 @@ permanent. Check every proposal against that.
 **Confirmed:** ESP32-S3 as the new controller, bought in threes so a brick is a
 board swap. Two LED strips in the neck. 6×AA in a rear cavity.
 
-Both strips are adhesive tape stuck to the face of the fretboard, out near its
-edges, just inside the outer strings — 27 mm apart centre to centre at the
-twelfth fret. Photographs: [`docs/hardware/`](docs/hardware/). Being that far
-apart, they read as two distinct runs, so per-side effects carry.
+The strips are adhesive tape on the face of the fretboard, out near its edges
+and just inside the outer strings — far enough apart to read as two distinct
+runs, so per-side effects carry. They are **two separate runs, not
+daisy-chained, and both are fed from the body end**, where the controller lives.
+Three consequences: two LED data pins rather than one, two channels of level
+shifting rather than one, and an electrical index that starts at the *last
+fret* rather than at the nut.
 
-**Measured: 26 LEDs per strip, 52 in total.** 20 mm from the nut to the first
-LED, 20 mm from the last LED to the last fret. That works out to a 16.6 mm
-pitch — 60.2 LEDs per metre, which is a standard 60/m tape to within half a
-percent, and only if the neck has 21 frets — since confirmed by counting. Two
-independent confirmations from one set of measurements, so the geometry can be
-trusted.
+It is a 5 V three-wire addressable tape — WS2812B, or something externally
+identical to it. Being commercial tape, **its LEDs are evenly spaced in
+millimetres and are not one per fret**: fret spacing is geometric and tape pitch
+is not. The opening line's "roughly one LED per fret" is true only as an average
+over the neck.
 
-**The two strips are separate, not daisy-chained, and both are fed from the body
-end**, where the controller lives. Three consequences for the rebuild:
-
-- Two LED data pins, not one, and **two channels of level shifting**, not one.
-- Electrical index 0 sits at the *last fret*, not the nut, on both strips. The
-  geometry model handles it; anything debugging raw buffers must know it.
-- One wiring run up the neck carries both data lines and the shared supply.
-
-**Worst case is 3.1 A at 5 V** with all 52 LEDs at full white — about 15.6 W,
-which is roughly 2.5 A drawn from a 7.2 V pack through a buck converter. Two
-things follow. The buck has to be sized for that (a 3 A module is not enough
-headroom; many cheap ones cannot hold 3 A), and AA holder contacts and spring
-terminals become a real series resistance at 2.5 A. Sizing the hardware for the
-worst case keeps the software brightness ceiling a comfort control rather than
-the only thing standing between the guitar and a brownout.
-
-The tape is a 5 V three-wire addressable strip: the visible pads are 5V / GND /
-DI with data-direction arrows, and the LEDs are 5050 packages. That rules out
-12 V four-wire parts such as WS2815, and rules out RGBW. WS2812B remains the
-best guess, but SK6812 and WS2812B clones are externally identical, so the exact
-part is still unconfirmed.
-
-**It is a commercial fixed-pitch tape, so its LEDs are evenly spaced in
-millimetres and cannot be one per fret** — fret spacing is geometric and tape
-pitch is not. Near the nut a fret space may hold two LEDs; past the twelfth it
-may hold none. The simulator defaults to even spacing accordingly. The brief's
-"roughly one LED per fret" is true only as a rough average over the neck.
+All the LEDs at full white draw enough current to matter. Sizing the supply for
+that worst case is what keeps the software brightness ceiling a comfort control
+rather than the only thing standing between the guitar and a brownout.
 
 **Chosen and worth preserving:** S3 over the cheaper C3 because the C3 lacks an
 FPU and is single-core, which would foreclose future signal-processing work. Costs
@@ -97,16 +75,10 @@ level shifting on the LED data line; proper decoupling, since radio transmission
 spikes can brown out the board; NiMH cells instead of alkalines, which sag badly
 under load. Battery voltage sensing is cheap to add and worth having.
 
-**Not yet verified — he will open the guitar and report.** Do not design around
-assumptions here; ask:
-
-- The exact strip part, if any marking on the reel or the tape says so.
-- What currently regulates the battery voltage down.
-- Existing wiring and connectors, and what gauge the run up the neck is.
-- Whether the pot and five-way are wired to the existing controls or to
-  dedicated ones, and what the five-way's resistor ladder looks like.
-- Flash size on the ESP32-S3 boards, which fixes the partition layout and is
-  one of the few things a cable is needed to change.
+**Some of this is still unverified, and he will open the guitar and report.** Do
+not design around an assumption where a measurement is missing — ask instead.
+What is still open is listed in [`docs/hardware/`](docs/hardware/) alongside
+what is settled.
 
 **Existing physical controls, both currently wired to the Nano and both worth
 keeping:**
@@ -131,12 +103,13 @@ added in a later session — that is the whole cost of keeping the door open.
 
 One repository holds the web UI, the firmware, and the CI pipeline.
 
-| document | what it answers |
-|---|---|
-| [`docs/effect-format.md`](docs/effect-format.md) | what an effect *is* — the spec the firmware is held to |
-| [`docs/decisions.md`](docs/decisions.md) | why it is that way, and what was rejected |
-| [`docs/firmware-plan.md`](docs/firmware-plan.md) | what must be true before and during the cabled session |
-| [`docs/hardware/`](docs/hardware/) | photographs and every measured number |
+**Each fact has exactly one home.** Every document links to it rather than
+restating it — a number written down twice is a number that will disagree with
+itself within a month. This brief therefore carries no measurements at all, and
+no rationale that belongs in the decision log. [`README.md`](README.md) lists
+the documents and what each one is authoritative for. The simulator's defaults
+are held to the hardware measurements by a test, so code and documentation
+cannot drift apart silently either.
 
 **One web page, two contexts.** The same file is published to Pages as a standalone
 simulator and embedded in the firmware as the live control UI, detecting at runtime
@@ -177,11 +150,8 @@ These exist because the device becomes hard to reach once the guitar is closed:
   guesswork on a very slow loop.
 - Network fallback, so the guitar is always reachable even away from known WiFi.
 - Radio off unless deliberately enabled — saves power and stops anyone connecting
-  mid-set. Safe mode must override this, or a bad config makes the guitar
-  unreachable from a phone, and safe mode must be reachable by a physical gesture
-  at boot since the knob and switch are the only inputs. Its fallback AP
-  credentials are compiled in and are the last way back, so choose them
-  deliberately.
+  mid-set. Safe mode must override it, or bad stored configuration makes the
+  guitar unreachable from a phone.
 - A brightness ceiling enforced in software, tunable remotely. This is the most
   effective runtime control available, far more so than any hardware choice.
 - An automatic dim as the pack falls, driven by the battery sense — not just a
@@ -191,6 +161,9 @@ These exist because the device becomes hard to reach once the guitar is closed:
 
 Anything tied to physical wiring that might need tuning later should be exposed as
 a remotely adjustable setting rather than a compile-time constant.
+
+How each of these gets built, and the handful of things a cable is genuinely
+needed for, is [`docs/firmware-plan.md`](docs/firmware-plan.md).
 
 ---
 

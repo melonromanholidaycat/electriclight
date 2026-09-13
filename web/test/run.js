@@ -246,26 +246,53 @@ test('pixels carry both fret and physical position', () => {
   assert(px[0].fret < px[21].fret, 'fret should increase toward the body');
 });
 
+// docs/hardware/README.md is the only place the measurements live. This reads
+// them back out of it, so the code cannot drift from the documentation without
+// the build saying so.
+function documentedMeasurements() {
+  const md = readFileSync(join(here, '..', '..', 'docs', 'hardware', 'README.md'), 'utf8');
+  const out = {};
+  for (const line of md.split('\n')) {
+    const row = line.match(/^\|([^|]*)\|([^|]*)\|\s*`([A-Za-z]+)`\s*\|/);
+    if (!row) continue;
+    const value = row[2].match(/-?\d+(?:\.\d+)?/);
+    if (value) out[row[3]] = parseFloat(value[0]);
+  }
+  return out;
+}
+
+test('the simulator defaults match the documented measurements', () => {
+  const documented = documentedMeasurements();
+  const keys = Object.keys(documented);
+  assert(keys.length >= 6, `only found ${keys.length} keyed rows in docs/hardware/README.md`);
+  for (const [key, value] of Object.entries(documented)) {
+    assert(key in DEFAULT_GEOMETRY, `docs/hardware/README.md documents '${key}', which is not a geometry setting`);
+    near(DEFAULT_GEOMETRY[key], value, 1e-9,
+      `'${key}' is ${DEFAULT_GEOMETRY[key]} in geometry.js but ${value} in docs/hardware/README.md.`);
+  }
+});
+
 test('the measured geometry lands on a standard tape density', () => {
-  // 26 LEDs per strip, 20 mm clear of the nut and 20 mm short of the 21st fret.
-  // If that arithmetic does not come out near a real strip pitch, one of the
-  // measurements in the brief is wrong.
+  // The measurements only come out near a real strip pitch if they are right,
+  // so this is a free check on the whole set of them.
   const g = DEFAULT_GEOMETRY;
-  assert(g.ledsPerStrip === 26 && g.frets === 21, 'defaults no longer match the guitar');
   const perMetre = 1000 / ledPitch(g);
   near(perMetre, 60, 1, 'implied strip density');
   const span = litSpan(g);
-  near(span.from, 20, 1e-9, 'nut to first LED');
-  near(span.to, fretDistance(21, g.scaleLength) - 20, 1e-9, 'last LED to last fret');
+  near(span.from, g.nutToFirstLed, 1e-9, 'nut to first LED');
+  near(span.to, fretDistance(g.frets, g.scaleLength) - g.lastLedToLastFret, 1e-9,
+    'last LED to last fret');
 });
 
 test('both strips are fed from the body, so index 0 sits at the last fret', () => {
-  const px = buildPixels(DEFAULT_GEOMETRY);
-  assert(px.length === 52, `expected 52 pixels, got ${px.length}`);
+  const g = DEFAULT_GEOMETRY;
+  const n = g.ledsPerStrip;
+  const px = buildPixels(g);
+  assert(px.length === n * 2, `expected ${n * 2} pixels, got ${px.length}`);
   for (const side of [0, 1]) {
-    const first = px[side * 26];
-    const last = px[side * 26 + 25];
-    assert(first.n === 0 && last.n === 25, 'electrical index should run 0..25');
+    const first = px[side * n];
+    const last = px[side * n + n - 1];
+    assert(first.n === 0 && last.n === n - 1, `electrical index should run 0..${n - 1}`);
     near(first.u, 1, 1e-9, `side ${side} index 0 should be at the body`);
     near(last.u, 0, 1e-9, `side ${side} index 25 should be at the nut`);
   }
