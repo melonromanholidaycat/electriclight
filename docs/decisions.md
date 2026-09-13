@@ -187,6 +187,52 @@ contract cannot drift when someone adjusts a default.
 Regenerating it is `npm run vectors`, and the diff must be read. A vector that
 changes unintentionally is the firmware and the simulator about to disagree.
 
+## The firmware is built on ESP-IDF
+
+**Chosen:** Espressif's own SDK, native.
+
+**Rejected:** *Arduino-ESP32*, which is faster to write and has the larger
+library ecosystem, and *Arduino as an ESP-IDF component*, which offers both at
+the cost of two sets of conventions in one codebase.
+
+**Why:** almost everything this firmware has to do well is a survival feature —
+OTA with automatic rollback, a safe mode that ignores stored configuration,
+partition control, remote logging, deliberate radio control. Under ESP-IDF each
+of those is a supported platform API; under Arduino most are something bolted on
+top. The owner cannot attach a debugger or read a serial port, so "the platform
+does this properly" is worth more than "this is quick to write", and the writing
+is my time rather than his. Reproducible CI in the official Docker image is a
+secondary benefit.
+
+**What would reopen it:** if someone else ends up maintaining the firmware and
+knows Arduino rather than IDF, the hybrid is the escape hatch and does not
+require starting over.
+
+## The guitar is called electriclight on the network
+
+`electriclight.local` over mDNS on a known network, and `electriclight` as the
+fallback access point. The mDNS name is a remotely editable setting; the AP name
+ships in the image.
+
+## The fallback AP password is in the repository, and is therefore not a secret
+
+**Chosen:** a known password, committed, documented, and treated as a deterrent
+rather than a defence.
+
+**Rejected:** injecting it at build time from a repository secret, which would
+keep it out of git. GitHub secrets cannot be read back, so the owner could not
+recover it — and this AP is the last way back when stored configuration has gone
+bad.
+
+**Why:** losing access to the guitar is a far worse outcome than a stranger
+connecting to it. The AP only exists when the guitar cannot reach a known
+network, the attacker has to be in radio range, and the worst they can do is
+change the lights. Recoverability beats secrecy at this threat model.
+
+**What would reopen it:** the repository going private, which makes the
+committed password meaningfully secret at no cost — or the guitar being used
+somewhere the lights genuinely matter.
+
 ## CI enables Pages itself
 
 `configure-pages` is given `enablement: true` so the first run turns Pages on

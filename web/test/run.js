@@ -393,6 +393,31 @@ test('a preset survives its definition losing and gaining params', () => {
   near(layers[0].params[1], 0.25, 0);
 });
 
+// --- the page/firmware contract ----------------------------------------------
+
+test('the page and the firmware agree on how a guitar identifies itself', () => {
+  // The page decides it is live rather than a simulator by fetching api/status
+  // and matching one string. The firmware puts that string there. Nothing else
+  // connects the two, so nothing else would notice if one of them changed.
+  const page = readFileSync(join(here, '..', 'src', 'main.js'), 'utf8');
+  const identity = readFileSync(join(here, '..', '..', 'firmware', 'main', 'app_identity.h'), 'utf8');
+
+  const wanted = page.match(/info\.device === '([^']+)'/);
+  assert(wanted, 'web/src/main.js no longer compares info.device to a literal');
+
+  const declared = identity.match(/#define\s+ELECTRICLIGHT_DEVICE_ID\s+"([^"]+)"/);
+  assert(declared, 'app_identity.h no longer defines ELECTRICLIGHT_DEVICE_ID');
+
+  assert(wanted[1] === declared[1],
+    `the page looks for device "${wanted[1]}" but the firmware reports "${declared[1]}"`);
+
+  const endpoint = page.match(/fetch\('([^']+)'/);
+  assert(endpoint && endpoint[1] === 'api/status',
+    `the page fetches "${endpoint && endpoint[1]}"; the firmware serves /api/status`);
+  assert(/"\/api\/status"/.test(readFileSync(join(here, '..', '..', 'firmware', 'main', 'app_http.c'), 'utf8')),
+    'the firmware no longer routes /api/status');
+});
+
 // --- golden vectors ----------------------------------------------------------
 
 test('golden vectors still match', () => {

@@ -2,3 +2,9 @@ node_modules/
 dist/
 .DS_Store
 scratch-*.png
+firmware/main/www/
+firmware/build/
+firmware/sdkconfig
+firmware/sdkconfig.old
+firmware/managed_components/
+firmware/dependencies.lock

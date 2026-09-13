@@ -6,12 +6,16 @@
 // on-device copy can never be different builds of different pieces.
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = join(here, 'src');
 const outDir = join(here, '..', 'dist');
+// The firmware embeds the same bytes, pre-compressed, so the device serves the
+// identical page the simulator publishes. Generated, not committed.
+const embedDir = join(here, '..', 'firmware', 'main', 'www');
 
 // Dependency order, maintained by hand. The build fails loudly if a module
 // references something that has not been emitted yet.
@@ -83,8 +87,12 @@ mkdirSync(outDir, { recursive: true });
 writeFileSync(join(outDir, 'index.html'), page);
 writeFileSync(join(outDir, '.nojekyll'), '');
 
+const gz = gzipSync(Buffer.from(page, 'utf8'), { level: 9 });
+mkdirSync(embedDir, { recursive: true });
+writeFileSync(join(embedDir, 'index.html.gz'), gz);
+
 const kb = (page.length / 1024).toFixed(1);
-console.log(`dist/index.html  ${kb} kB`);
+console.log(`dist/index.html  ${kb} kB  (${(gz.length / 1024).toFixed(1)} kB gzipped, embedded for the firmware)`);
 if (page.length > 400 * 1024) {
   console.error('Bundle is too large to embed comfortably in firmware flash.');
   process.exit(1);

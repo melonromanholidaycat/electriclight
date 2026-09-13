@@ -1,0 +1,22 @@
+CONFIG_IDF_TARGET="esp32s3"
+
+# Partitions. See firmware/partitions/ for why the layout matters more than
+# anything else in this file.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/16mb.csv"
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+
+# A new image must prove itself before it is trusted. Without this an OTA that
+# boots and then wedges is permanent, and the guitar is closed.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+
+# Serve the embedded page and accept an upload over the same server.
+CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
+CONFIG_HTTPD_MAX_URI_LEN=512
+
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
+CONFIG_FREERTOS_HZ=1000
+
+# There is no serial monitor on the finished instrument, so the log that matters
+# is the one served over HTTP. Keep the level useful rather than minimal.
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y

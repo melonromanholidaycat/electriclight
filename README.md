@@ -6,8 +6,10 @@ ESP32-S3 so effects can be designed, edited and deployed over WiFi. See
 
 ## Where this is
 
-**Step 1 of 7: the simulator.** Everything here runs in a browser today. There
-is no firmware yet. The guitar has been measured but not opened.
+**Steps 1 and 2 of 7.** The simulator runs in a browser today. The firmware
+boots, serves that same page and accepts an update over the air, and builds
+green in CI — but has never run on hardware, because the guitar has been
+measured and photographed but not opened.
 
 ```
 web/src/lang/     the effect language: tokeniser, parser, compiler, bytecode evaluator
@@ -15,6 +17,7 @@ web/src/model/    neck geometry, render engine, effect library
 web/src/ui/       canvas neck, knob, five-way switch
 web/build.js      inlines it all into one self-contained page
 web/test/         unit tests, golden vectors, browser smoke test
+firmware/         ESP-IDF project: boots, serves the page, takes an OTA update
 docs/             specification, decisions, firmware plan, hardware photographs
 ```
 
@@ -43,6 +46,13 @@ The smoke test needs Chromium:
 ```sh
 npm ci && npx playwright install chromium
 node web/test/smoke.mjs
+```
+
+The firmware needs ESP-IDF v5.4 and the generated page:
+
+```sh
+node web/build.js                    # writes firmware/main/www/index.html.gz
+cd firmware && idf.py set-target esp32s3 && idf.py build
 ```
 
 CI runs all three on every push. On the default branch it also publishes

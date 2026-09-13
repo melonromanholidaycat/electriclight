@@ -1,8 +1,21 @@
 # Firmware plan
 
-Nothing here is built yet. This is what has to be true before and during the
-cabled session, written down while it is fresh, because the session is scarce
-and the cost of arriving with the wrong module is a delay measured in weeks.
+What has to be true before and during the cabled session, written down while it
+is fresh, because the session is scarce and the cost of arriving with the wrong
+module is a delay measured in weeks.
+
+**Built so far (step 2):** an ESP-IDF project in [`firmware/`](../firmware/)
+that boots, joins a known network or falls back to its own access point,
+announces itself over mDNS, serves the embedded control page, exposes
+`/api/status`, `/api/log` and `/api/ota`, and takes a firmware image over the
+air with automatic rollback if the new one cannot be reached. No LED output and
+no effect evaluator yet — those are steps 3 and 4.
+
+Two things in it are deliberately provisional and must change before the guitar
+is closed. The radio follows a stored setting that defaults **on**, because
+there is no hardware yet to read a boot gesture from; and the health check that
+confirms a new image counts "reachable" as healthy, which will want to include
+"the LEDs actually lit" once there are any.
 
 The guiding rule from the brief: **anything that cannot be changed over WiFi is
 effectively permanent.** Most of this document is that rule applied.
@@ -22,6 +35,11 @@ Everything else — effects, settings, geometry, brightness, WiFi credentials,
 the web UI itself — must be reachable over the air, or it is a design bug.
 
 ## Flash and partitions
+
+The layout is written: [`firmware/partitions/16mb.csv`](../firmware/partitions/16mb.csv),
+with [`4mb.csv`](../firmware/partitions/4mb.csv) as the fallback if the boards
+turn out to be smaller. Two 3 MB app slots, a 24 KB NVS, and the remainder as
+storage.
 
 **Buy or confirm 16 MB modules.** A 4 MB ESP32-S3 has to fit two OTA app slots,
 the embedded web UI and stored effects, and it will be tight enough to force bad
@@ -123,9 +141,12 @@ So:
 
 - **Safe mode must force the radio on**, ignoring stored config, with hardcoded
   fallback AP credentials.
-- **Those credentials are effectively permanent.** They are compiled in and they
-  are the last way back. Choose them deliberately rather than letting a default
-  happen.
+- **Those credentials are not permanent — they ship in the image and an OTA can
+  change them — but they are the last way back.** Which makes changing them the
+  riskiest edit in the firmware: get safe mode wrong in a build that also breaks
+  normal operation and there is no path left except a cable. Treat a change to
+  safe mode as a change that has to be verified before it is relied on, not as
+  an ordinary edit.
 - Safe mode must be reachable by a **physical gesture at boot** — the five-way
   and the pot are the only inputs available, so some combination of them held at
   power-on. Design it so it cannot be hit by accident on stage.
@@ -175,6 +196,15 @@ In order, and the order matters:
    the guitar**. An OTA path that has never been exercised is not a path.
 5. Verify safe mode entry by its physical gesture, also before closing.
 6. Flash all three boards, so a brick is a swap rather than another session.
+
+## Host-testable core
+
+The effect evaluator (step 4) has to reproduce `web/test/vectors.json` exactly,
+and proving that should not need a device. It will live in a plain C++ component
+with no ESP-IDF dependencies, built twice: into the firmware, and natively on
+the CI runner against the golden vectors. Nothing of it exists yet — the step 2
+firmware is all hardware-facing code, and an empty abstraction would be worse
+than none.
 
 ## Known issues to handle later
 
