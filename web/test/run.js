@@ -102,6 +102,39 @@ test('built-ins behave', () => {
   near(evalSource('v = gauss(0, 0.5)').v, 1, 1e-6);
 });
 
+test('warp is identity at zero, monotonic, and pinned at both ends', () => {
+  const at = (x, c, a) => evalSource(`v = warp(${x}, ${c}, ${a})`).v;
+  for (let i = 0; i <= 10; i++) near(at(i / 10, 0.5, 0), i / 10, 1e-6, 'identity');
+  for (const c of [0, 0.25, 0.5, 0.9, 1]) {
+    for (const a of [-3, -1, 0, 1, 3]) {
+      near(at(0, c, a), 0, 1e-6, `start pinned (c=${c} a=${a})`);
+      near(at(1, c, a), 1, 1e-6, `end pinned (c=${c} a=${a})`);
+      let last = -1;
+      for (let i = 0; i <= 20; i++) {
+        const y = at(i / 20, c, a);
+        assert(y >= last - 1e-6, `not monotonic at c=${c} a=${a}, x=${i / 20}`);
+        assert(y >= 0 && y <= 1, `left 0..1 at c=${c} a=${a}: ${y}`);
+        last = y;
+      }
+    }
+  }
+  // Positive amount bunches the pattern up at the centre, negative spreads it.
+  const spread = (a) => at(0.6, 0.5, a) - at(0.4, 0.5, a);
+  assert(spread(2) > spread(0), 'positive amount should squeeze at the centre');
+  assert(spread(-2) < spread(0), 'negative amount should stretch at the centre');
+  // Inputs outside 0..1 are clamped rather than undefined.
+  near(at(-5, 0.5, 1), 0, 1e-6, 'below range');
+  near(at(5, 0.5, 1), 1, 1e-6, 'above range');
+});
+
+test('warp knows nothing about frets', () => {
+  // It is a plain coordinate remap: same numbers in, same numbers out, whatever
+  // the neck looks like.
+  const a = evalSource('v = warp(0.3, 0.7, 1.5)', { nfrets: 22 }).v;
+  const b = evalSource('v = warp(0.3, 0.7, 1.5)', { nfrets: 24 }).v;
+  assert(a === b, 'warp should not depend on the neck');
+});
+
 test('hash and noise are deterministic and bounded', () => {
   const a = evalSource('v = hash(3, 7)').v;
   const b = evalSource('v = hash(3, 7)').v;

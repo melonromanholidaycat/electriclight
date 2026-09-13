@@ -47,6 +47,21 @@ function valueNoise(x) {
 }
 
 const glslMod = (x, y) => (y === 0 ? 0 : f(x - f(y * Math.floor(f(x / y)))));
+
+// Monotonic remap of 0..1 onto itself, identity at amount 0. Positive amount
+// squeezes the pattern together around `centre` and stretches it at the ends;
+// negative does the reverse. Nothing here knows about frets - it is a plain
+// coordinate warp, so an effect can squeeze any part of the neck it likes.
+function warpPos(x, centre, amount) {
+  const xx = sat(x);
+  const c = sat(centre);
+  const k = f(Math.pow(2, -amount));
+  if (!(k > 0) || !Number.isFinite(k)) return xx;
+  if (c <= 0) return f(Math.pow(xx, k));
+  if (c >= 1) return f(1 - Math.pow(1 - xx, k));
+  if (xx < c) return f(c * f(1 - Math.pow(f(1 - f(xx / c)), k)));
+  return f(c + f(f(1 - c) * Math.pow(f(f(xx - c) / f(1 - c)), k)));
+}
 const sat = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
 
 function smoothstep(e0, e1, x) {
@@ -84,6 +99,7 @@ const CALLS = [
   (a, b) => (b === 0 ? 0 : f(Math.exp(f(-f(f(a * a) / f(b * b)))))),
   (a, b) => hash2(a, b),
   (a) => valueNoise(a),
+  (a, b, c) => warpPos(a, b, c),
 ];
 
 // --- the machine -------------------------------------------------------------
@@ -153,4 +169,4 @@ export function createRunner(program) {
 }
 
 export const VAR_COUNT = VARS.length;
-export const _internals = { hash2, hashInt, valueNoise, glslMod, FUNC_INDEX };
+export const _internals = { hash2, hashInt, valueNoise, glslMod, warpPos, FUNC_INDEX };

@@ -21,15 +21,18 @@ s     = 1
   {
     id: 'comet',
     name: 'Comet',
-    note: 'Head travels in physical space, tail decays through prev.',
+    note: 'Head travels in physical space, tail decays through prev. Squeeze makes it speed up and slow down along the neck.',
     source: `param speed  0.05..4   = 0.6  "Speed"
 param width  0.01..0.4 = 0.06 "Head width"
 param hue    0..360    = 190  "Colour"
 param tail   0..0.98   = 0.88 "Tail"
 param split  0..180    = 30   "Side split"
+param at     0..1      = 0.5  "Squeeze at"
+param squash -3..3     = 0    "Squeeze"
 
+pos  = warp(u, at, squash)
 head = fract(t * speed)
-d    = abs(u - head)
+d    = abs(pos - head)
 d    = min(d, 1 - d)
 v    = max(gauss(d, width), prev * tail)
 h    = hue + side * split
@@ -55,17 +58,20 @@ s   = 1
   {
     id: 'standingwave',
     name: 'Standing Wave',
-    note: 'The Space knob crossfades physical spacing to fret spacing - the clearest demo of why both exist.',
-    source: `param freq  0.5..8  = 2    "Waves over neck"
-param speed -3..3   = 0.5  "Speed"
-param space 0..1    = 0    "Physical .. fret"
-param hue   0..360  = 160  "Colour"
-param wash  0..120  = 60   "Hue spread"
+    note: 'Space crossfades physical spacing to fret spacing. Squeeze bunches the pattern anywhere you point it, frets or no frets.',
+    source: `param freq   0.5..8  = 2    "Waves over neck"
+param speed  -3..3   = 0.5  "Speed"
+param space  0..1    = 0    "Physical .. fret"
+param at     0..1    = 0.5  "Squeeze at"
+param squash -3..3   = 0    "Squeeze"
+param hue    0..360  = 160  "Colour"
+param wash   0..120  = 60   "Hue spread"
 
-pos = mix(u, fret / nfrets, space)
-v   = sat(0.5 + 0.5 * sin((pos * freq - t * speed) * TAU))
-h   = hue + pos * wash
-s   = 1
+base = mix(u, fret / nfrets, space)
+pos  = warp(base, at, squash)
+v    = sat(0.5 + 0.5 * sin((pos * freq - t * speed) * TAU))
+h    = hue + pos * wash
+s    = 1
 `,
   },
   {
@@ -109,6 +115,8 @@ export const BUILTIN_PRESETS = [
   { defId: 'fretchase', name: 'Walk Up', values: {} },
   { defId: 'standingwave', name: 'Physical', values: { space: 0 } },
   { defId: 'standingwave', name: 'Per Fret', values: { space: 1, freq: 3 } },
+  { defId: 'standingwave', name: 'Squeezed Middle', values: { space: 0, freq: 3, at: 0.5, squash: 2 } },
+  { defId: 'comet', name: 'Slows At The Nut', values: { at: 0, squash: -1.6, speed: 0.35, hue: 300 } },
   { defId: 'sparkle', name: 'Embers', values: { hue: 20, density: 0.04, decay: 0.95, jitter: 40 } },
   { defId: 'sides', name: 'Wiring Check', values: { taper: 1 } },
 ];

@@ -101,7 +101,7 @@ Comparisons and logic yield 0 or 1. Both branches of `?:` are evaluated.
 ### Functions
 
 `abs min max clamp floor ceil round fract mod sign sqrt pow exp log sin cos tan
-atan2 step smoothstep mix sat tri gauss hash noise`
+atan2 step smoothstep mix sat tri gauss hash noise warp`
 
 Constants: `PI`, `TAU`, `E`.
 
@@ -109,6 +109,36 @@ Constants: `PI`, `TAU`, `E`.
 - `sat(x)` clamps to 0..1; `tri(x)` is a 0..1 triangle wave of period 1
 - `gauss(d, w)` is `exp(-d²/w²)` — the shape of nearly every pulse and comet
 - `hash(a, b)` is a stable pseudo-random in 0..1; `noise(x)` is smooth 1D value noise
+- `warp(x, centre, amount)` — see below
+
+### warp
+
+`warp` remaps 0..1 onto itself, monotonically, with both ends pinned. `amount`
+of 0 is the identity. Positive `amount` bunches a pattern together around
+`centre` and stretches it at the ends; negative does the reverse. Inputs outside
+0..1 are clamped.
+
+It knows nothing about frets. That is the point: squeezing part of the neck is
+useful whether or not the LEDs line up with anything, so it is a plain
+coordinate warp and the effect decides what to feed it — physical position, fret
+position, or a crossfade of the two.
+
+**Why it lives in effects rather than in the engine.** A global warp applied to
+`u` before effects saw it would be free for every effect and tunable in one
+place. It was not done that way because it would blur two different things: how
+the LEDs are actually spaced (calibration, measured once the guitar is open) and
+how squashed you want a pattern to look (artistic, per preset). With them
+separate, a neck that looks wrong is unambiguously one or the other. This is
+worth revisiting once the real LED positions are known.
+
+Implementation, which both evaluators must match exactly:
+
+```
+k = 2^(-amount)                       , identity when amount = 0
+x < centre : centre · (1 − (1 − x/centre)^k)
+x ≥ centre : centre + (1 − centre) · ((x − centre)/(1 − centre))^k
+centre ≤ 0 : x^k          centre ≥ 1 : 1 − (1 − x)^k
+```
 
 ### Arithmetic rules that both implementations must honour
 
@@ -166,6 +196,13 @@ The code is RPN over a float32 stack. Opcodes and their operands are listed in
 `web/src/lang/ops.js`, which is the authoritative table — **indices are wire
 format: append, never renumber.** In practice an effect compiles to 70–110
 bytes.
+
+Appending a function is backward compatible for decoding, but an effect that
+uses a new one will not run on firmware built before it existed. So the firmware
+must **reject an unknown opcode or function index by refusing the effect**, with
+a message naming the index — never by running it anyway or by crashing. The page
+is served by the device, so the two normally ship together; this matters when an
+effect is carried over from the Pages simulator, which is always newer.
 
 Reserved limits: 64 locals, 256 constants, 32 params, stack depth 32, 4096 bytes
 of code.

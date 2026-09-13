@@ -68,6 +68,7 @@ export const FUNCS = [
   { name: 'gauss', arity: 2 },
   { name: 'hash', arity: 2 },
   { name: 'noise', arity: 1 },
+  { name: 'warp', arity: 3 },
 ];
 
 export const FUNC_INDEX = Object.fromEntries(FUNCS.map((f, i) => [f.name, i]));

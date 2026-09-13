@@ -48,7 +48,8 @@ rather than code, and why the golden vectors exist.
 ## The effect format
 
 An effect is a few formulas evaluated per pixel, per frame, against fret
-position, physical position, time and the previous frame. It compiles in the
+position, physical position, time and the previous frame, with `warp()` to
+squeeze or stretch a pattern anywhere along the neck. It compiles in the
 browser to 70–110 bytes of bytecode; the firmware only ever runs the bytecode.
 
 Definitions are maths. Presets are named sets of slider values, grouped under
