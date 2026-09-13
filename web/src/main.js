@@ -7,6 +7,7 @@ import {
   loadLibrary, saveLibrary, defaultLibrary, buildLayers, findPreset, findDefinition,
   presetsByDefinition, makePreset, makeId, invalidate, programFor, SLOT_COUNT,
 } from './model/library.js';
+import { ledPitch, litSpan, fretDistance } from './model/geometry.js';
 import { NeckView } from './ui/neck.js';
 import { Knob, FiveWay } from './ui/controls.js';
 import { VARS, FUNCS, CONSTANTS } from './lang/ops.js';
@@ -441,7 +442,9 @@ const SETUP_FIELDS = [
   { key: 'geometry.frets', label: 'Frets', type: 'number', step: 1, min: 1, max: 36 },
   { key: 'geometry.ledsPerStrip', label: 'LEDs per strip', type: 'number', step: 1, min: 1, max: 120 },
   { key: 'geometry.mapping', label: 'LED spacing', type: 'select', options: [['even', 'Evenly spaced (a real LED tape)'], ['fret-midpoint', 'One per fret space']] },
-  { key: 'geometry.firstFret', label: 'First LED sits above fret', type: 'number', step: 1, min: 0, max: 24 },
+  { key: 'geometry.nutToFirstLed', label: 'Nut to first LED (mm)', type: 'number', step: 0.5, min: 0, max: 200 },
+  { key: 'geometry.lastLedToLastFret', label: 'Last LED to last fret (mm)', type: 'number', step: 0.5, min: 0, max: 200 },
+  { key: 'geometry.firstFret', label: 'First LED sits above fret (per-fret spacing only)', type: 'number', step: 1, min: 0, max: 24 },
   { key: 'geometry.stripSpacing', label: 'Distance between the strips (mm)', type: 'number', step: 0.5, min: 2, max: 70 },
   { key: 'geometry.reversed.0', label: 'Bass strip runs body to nut', type: 'check' },
   { key: 'geometry.reversed.1', label: 'Treble strip runs body to nut', type: 'check' },
@@ -512,12 +515,33 @@ function buildSetup() {
       else app.engine.setOutput(app.lib.output);
       persist();
       applyCurrent();
+      renderDerived();
     };
     input.addEventListener(f.type === 'range' ? 'input' : 'change', commit);
     wrap.appendChild(input);
     host.appendChild(wrap);
   }
+  renderDerived();
+}
 
+// A commercial tape has a fixed pitch, so the implied density is a free check on
+// the measurements: land nowhere near a standard density and something is wrong.
+function renderDerived() {
+  const g = app.lib.geometry;
+  const pitch = ledPitch(g);
+  const span = litSpan(g);
+  const perMetre = pitch > 0 ? 1000 / pitch : 0;
+  const standard = [30, 60, 74, 96, 100, 144];
+  const nearest = standard.reduce((a, b) => (Math.abs(b - perMetre) < Math.abs(a - perMetre) ? b : a));
+  const off = Math.abs(nearest - perMetre) / nearest;
+  $('#derived').innerHTML =
+    `Last fret at ${fretDistance(g.frets, g.scaleLength).toFixed(0)} mm. ` +
+    `LEDs span ${span.from.toFixed(0)}–${span.to.toFixed(0)} mm, ` +
+    `pitch ${pitch.toFixed(2)} mm — <strong>${perMetre.toFixed(1)} LEDs/m</strong>` +
+    (off < 0.03
+      ? `, which is a standard ${nearest}/m tape.`
+      : `, which matches no standard density. Closest is ${nearest}/m — check the numbers above.`) +
+    ` ${g.ledsPerStrip * 2} LEDs total, up to ${(g.ledsPerStrip * 2 * app.lib.output.mAPerLed / 1000).toFixed(1)} A at full white.`;
 }
 
 function bindReset() {

@@ -48,9 +48,31 @@ permanent. Check every proposal against that.
 board swap. Two LED strips in the neck. 6×AA in a rear cavity.
 
 Both strips are adhesive tape stuck to the face of the fretboard, out near its
-edges, just inside the outer strings — roughly 30 mm apart centre to centre.
-Photographs: [`docs/hardware/`](docs/hardware/). Being that far apart, they read
-as two distinct runs, so per-side effects carry.
+edges, just inside the outer strings — 27 mm apart centre to centre at the
+twelfth fret. Photographs: [`docs/hardware/`](docs/hardware/). Being that far
+apart, they read as two distinct runs, so per-side effects carry.
+
+**Measured: 26 LEDs per strip, 52 in total.** 20 mm from the nut to the first
+LED, 20 mm from the last LED to the last fret. That works out to a 16.6 mm
+pitch — 60.2 LEDs per metre, which is a standard 60/m tape to within half a
+percent, and only if the neck has 21 frets. Two independent confirmations from
+one set of measurements, so the geometry can be trusted.
+
+**The two strips are separate, not daisy-chained, and both are fed from the body
+end**, where the controller lives. Three consequences for the rebuild:
+
+- Two LED data pins, not one, and **two channels of level shifting**, not one.
+- Electrical index 0 sits at the *last fret*, not the nut, on both strips. The
+  geometry model handles it; anything debugging raw buffers must know it.
+- One wiring run up the neck carries both data lines and the shared supply.
+
+**Worst case is 3.1 A at 5 V** with all 52 LEDs at full white — about 15.6 W,
+which is roughly 2.5 A drawn from a 7.2 V pack through a buck converter. Two
+things follow. The buck has to be sized for that (a 3 A module is not enough
+headroom; many cheap ones cannot hold 3 A), and AA holder contacts and spring
+terminals become a real series resistance at 2.5 A. Sizing the hardware for the
+worst case keeps the software brightness ceiling a comfort control rather than
+the only thing standing between the guitar and a brownout.
 
 The tape is a 5 V three-wire addressable strip: the visible pads are 5V / GND /
 DI with data-direction arrows, and the LEDs are 5050 packages. That rules out
@@ -77,14 +99,13 @@ under load. Battery voltage sensing is cheap to add and worth having.
 **Not yet verified — he will open the guitar and report.** Do not design around
 assumptions here; ask:
 
-- **Exact LED count per strip.** With even spacing confirmed, this single number
-  fixes the whole geometry. It is the most valuable thing still missing.
-- Where the first and last LED sit relative to the nut and the last fret.
+- Confirmation that the neck has 21 frets — a five-second count, and the LED
+  pitch arithmetic above depends on it.
 - The exact strip part, if any marking on the reel or the tape says so.
 - What currently regulates the battery voltage down.
-- Existing wiring and connectors.
-- Whether the two strips are wired as one chain or two, and which end each is
-  fed from — that decides whether either needs reversing in the geometry.
+- Existing wiring and connectors, and what gauge the run up the neck is.
+- Whether the pot and five-way are wired to the existing controls or to
+  dedicated ones, and what the five-way's resistor ladder looks like.
 - Flash size on the ESP32-S3 boards, which fixes the partition layout and is
   one of the few things a cable is needed to change.
 

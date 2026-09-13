@@ -12,14 +12,16 @@ import { FORMAT_VERSION } from '../src/lang/ops.js';
 // because somebody adjusted a default.
 const GEOMETRY = {
   scaleLength: 648,
-  frets: 22,
-  ledsPerStrip: 22,
+  frets: 21,
+  ledsPerStrip: 26,
   mapping: 'even',
   firstFret: 0,
-  reversed: [false, false],
+  nutToFirstLed: 20,
+  lastLedToLastFret: 20,
+  reversed: [true, true],
   nutWidth: 43,
   heelWidth: 56,
-  stripSpacing: 30,
+  stripSpacing: 27,
 };
 const OUTPUT = { ...DEFAULT_OUTPUT, brightnessCeiling: 1, currentBudget: 100000 };
 const FRAMES = [0, 1, 2, 5, 17, 59, 60, 121, 300];

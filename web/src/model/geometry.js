@@ -4,23 +4,28 @@
 // "roughly" one LED per fret, and nobody has opened the guitar yet. On the
 // device this whole object is remotely adjustable.
 
+// Measured on the guitar. See docs/hardware/.
 export const DEFAULT_GEOMETRY = {
   scaleLength: 648,     // mm, 25.5" Strat scale
-  frets: 22,
-  ledsPerStrip: 22,
+  frets: 21,
+  ledsPerStrip: 26,
   // A commercial LED tape has a fixed pitch, so its LEDs are evenly spaced in
   // millimetres and cannot line up with frets, which are not. 'fret-midpoint'
   // stays available in case a strip was cut and re-spaced by hand.
   mapping: 'even', // or 'fret-midpoint'
-  firstFret: 0,         // index of the fret space holding LED 0
-  reversed: [false, false], // per side: does the strip run body -> nut?
+  firstFret: 0,         // index of the fret space holding LED 0 ('fret-midpoint' only)
+  nutToFirstLed: 20,    // mm from the nut to the first LED
+  lastLedToLastFret: 20,// mm from the last LED to the last fret
+  // Both strips are fed from the body end, where the controller lives, so the
+  // electrical index runs body -> nut: LED 0 sits at the highest fret.
+  reversed: [true, true],
   nutWidth: 43,         // mm, for drawing only
   heelWidth: 56,
   // Centre-to-centre distance between the two strips, in mm - the thing you can
   // actually get a ruler across. They run on the fretboard, out near the edges,
   // just inside the outer strings. Drawing only: effects address position along
   // the neck and cannot see where a strip sits across it.
-  stripSpacing: 30,
+  stripSpacing: 27,
 };
 
 // Distance from the nut to fret n, in mm.
@@ -34,14 +39,28 @@ export function fretAt(mm, scaleLength) {
   return r <= 0 ? Infinity : -12 * Math.log2(r);
 }
 
+// The span the LEDs actually occupy, in mm from the nut.
+export function litSpan(g) {
+  const lastFret = fretDistance(g.frets, g.scaleLength);
+  return { from: g.nutToFirstLed ?? 0, to: lastFret - (g.lastLedToLastFret ?? 0) };
+}
+
+// Centre-to-centre LED pitch. A commercial tape has a fixed pitch, so this is a
+// useful sanity check: it should land near a standard density (60/m is
+// 16.67 mm, 30/m is 33.3 mm). If it does not, one of the measurements is off.
+export function ledPitch(g) {
+  const { from, to } = litSpan(g);
+  return g.ledsPerStrip > 1 ? (to - from) / (g.ledsPerStrip - 1) : 0;
+}
+
 // Positions of every LED on one strip, nut-first, in mm from the nut.
 function stripPositions(g) {
   const out = [];
-  const lastFret = fretDistance(g.frets, g.scaleLength);
+  const { from, to } = litSpan(g);
   for (let i = 0; i < g.ledsPerStrip; i++) {
     if (g.mapping === 'even') {
       const t = g.ledsPerStrip === 1 ? 0 : i / (g.ledsPerStrip - 1);
-      out.push(t * lastFret);
+      out.push(from + t * (to - from));
     } else {
       // Sit each LED in the middle of a fret space, which is where a side dot goes.
       const a = fretDistance(g.firstFret + i, g.scaleLength);

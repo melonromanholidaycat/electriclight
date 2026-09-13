@@ -7,7 +7,7 @@ import { createRunner } from '../src/lang/eval.js';
 import { encodeProgram, decodeProgram, toBase64, fromBase64 } from '../src/lang/serialize.js';
 import { VARS, FORMAT_VERSION } from '../src/lang/ops.js';
 import { Engine } from '../src/model/engine.js';
-import { fretDistance, fretAt, buildPixels, DEFAULT_GEOMETRY } from '../src/model/geometry.js';
+import { fretDistance, fretAt, buildPixels, ledPitch, litSpan, DEFAULT_GEOMETRY } from '../src/model/geometry.js';
 import { defaultLibrary, buildLayers, presetsByDefinition, resolveValues, programFor } from '../src/model/library.js';
 import { buildVectors, GEOMETRY, OUTPUT } from './vectors.js';
 
@@ -236,12 +236,39 @@ test('fret spacing follows the real geometry', () => {
 });
 
 test('pixels carry both fret and physical position', () => {
-  const px = buildPixels({ ...DEFAULT_GEOMETRY, ledsPerStrip: 22 });
+  // Direction pinned rather than taken from the defaults, which describe the
+  // real guitar and are fed from the body end.
+  const px = buildPixels({ ...DEFAULT_GEOMETRY, ledsPerStrip: 22, reversed: [false, false] });
   assert(px.length === 44, `expected 44 pixels, got ${px.length}`);
   near(px[0].u, 0, 1e-9);
   near(px[21].u, 1, 1e-9);
   assert(px[0].side === 0 && px[22].side === 1, 'sides are not grouped as expected');
   assert(px[0].fret < px[21].fret, 'fret should increase toward the body');
+});
+
+test('the measured geometry lands on a standard tape density', () => {
+  // 26 LEDs per strip, 20 mm clear of the nut and 20 mm short of the 21st fret.
+  // If that arithmetic does not come out near a real strip pitch, one of the
+  // measurements in the brief is wrong.
+  const g = DEFAULT_GEOMETRY;
+  assert(g.ledsPerStrip === 26 && g.frets === 21, 'defaults no longer match the guitar');
+  const perMetre = 1000 / ledPitch(g);
+  near(perMetre, 60, 1, 'implied strip density');
+  const span = litSpan(g);
+  near(span.from, 20, 1e-9, 'nut to first LED');
+  near(span.to, fretDistance(21, g.scaleLength) - 20, 1e-9, 'last LED to last fret');
+});
+
+test('both strips are fed from the body, so index 0 sits at the last fret', () => {
+  const px = buildPixels(DEFAULT_GEOMETRY);
+  assert(px.length === 52, `expected 52 pixels, got ${px.length}`);
+  for (const side of [0, 1]) {
+    const first = px[side * 26];
+    const last = px[side * 26 + 25];
+    assert(first.n === 0 && last.n === 25, 'electrical index should run 0..25');
+    near(first.u, 1, 1e-9, `side ${side} index 0 should be at the body`);
+    near(last.u, 0, 1e-9, `side ${side} index 25 should be at the nut`);
+  }
 });
 
 test('a reversed strip keeps its electrical index but moves physically', () => {
