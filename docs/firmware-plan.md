@@ -36,15 +36,27 @@ the web UI itself — must be reachable over the air, or it is a design bug.
 
 ## Flash and partitions
 
-The layout is written: [`firmware/partitions/16mb.csv`](../firmware/partitions/16mb.csv),
-with [`4mb.csv`](../firmware/partitions/4mb.csv) as the fallback if the boards
-turn out to be smaller. Two 3 MB app slots, a 24 KB NVS, and the remainder as
-storage.
+Both layouts are written and both are built on every push:
+[`4mb.csv`](../firmware/partitions/4mb.csv) (the default — two 1.5 MB app slots,
+896 KB storage) and [`16mb.csv`](../firmware/partitions/16mb.csv) (two 3 MB
+slots, 9.9 MB storage).
 
-**Buy or confirm 16 MB modules.** A 4 MB ESP32-S3 has to fit two OTA app slots,
-the embedded web UI and stored effects, and it will be tight enough to force bad
-choices later. 16 MB removes the question. If the boards on hand are 4 MB, that
-is worth knowing *before* the cabled session, not during it.
+**4 MB is enough — measured, not estimated.** The earlier advice here was to
+insist on 16 MB modules. That was written before there was a firmware to weigh,
+and it was wrong in a way worth recording: it optimised for never needing a
+cable again without weighing whether the board fits in a guitar.
+
+Built for size, the step 2 image is **801 KB**. Against a 4 MB module's 1.5 MB
+app slot that leaves **48% free — 753 KB** — before the evaluator, the LED
+driver or effect storage go in, and those are tens of kilobytes, not hundreds.
+On a 16 MB module the same image leaves 74% free.
+
+CI builds both layouts on every push, so the app outgrowing a 1.5 MB slot would
+show up as a red build months before it showed up at the cabled session.
+
+4 MB is the default the build produces, because that is what the boards in hand
+are. The remaining cost of 4 MB is honest but small: less room for something
+unforeseen, and repartitioning needs a cable.
 
 The layout needs, at minimum:
 
@@ -58,11 +70,13 @@ The layout needs, at minimum:
 Size every partition with generous headroom. Unused flash costs nothing;
 repartitioning costs a cable and a borrowed computer.
 
-As built, the step 2 image is 871 KB against a 3 MB slot — **72% of the app
-partition is still free**, before there is any evaluator, LED driver or effect
-storage in it. The bootloader uses 36% of its own space. The embedded page is
-25 KB of that image, and `node web/build.js` prints the current figure. All of
-it grows; none of it is close.
+The bootloader uses 36% of its own space. The embedded page is 25 KB of the app
+image, and `node web/build.js` prints the current figure.
+
+Optimising for size rather than for debugging saved 8% — less than the 20–30%
+that is usual, because most of the image is Espressif's own WiFi and networking
+libraries, which are already built for size. Worth having, not a lever to pull
+again.
 
 ## Pin budget
 
@@ -87,11 +101,27 @@ Pins to keep clear:
 - **Strapping pins: GPIO0, GPIO3, GPIO45, GPIO46.** A pull-up or pull-down on
   these changes boot behaviour.
 - **GPIO19 and GPIO20** are USB D− and D+ if native USB is used.
-- **On modules with octal PSRAM (the `R8` suffix), GPIO35–37 are consumed.**
+- **On modules with octal PSRAM (the `R8` suffix), GPIO35–37 are consumed.** The
+  small `ESP32-S3FH4R2`-based boards carry *quad* PSRAM instead, which leaves
+  those three pins free — one of the few ways the smaller board is the better
+  one here.
 
-Verify all of this against the datasheet for the exact module before wiring
-anything. The five-way's electrical arrangement is still unknown and needs
-checking when the guitar is open.
+Verify all of this against the pinout of the exact board before wiring anything.
+On a small board this is the constraint that actually bites, not flash: the
+whole budget is eight pins, three of which must be ADC1, and the small boards
+break out fewer pins than a DevKitC. The five-way's electrical arrangement is
+also still unknown and needs checking when the guitar is open.
+
+Two more things to check on a small board, neither fatal and both worth knowing
+before the guitar is closed:
+
+- **The antenna is a PCB trace with no external connector.** WiFi is the only
+  transport there is, and it will be working from inside a wooden cavity next to
+  a battery pack. Wood is not much of an obstacle, but this is worth confirming
+  at the cabled session rather than at a rehearsal.
+- **The on-board 3.3 V regulator is small.** The S3 pulls several hundred
+  milliamps in bursts while transmitting, which is exactly when a marginal
+  supply browns out. The decoupling already planned matters more here.
 
 The S3's RMT peripheral has four TX channels, so two LED strips are comfortable.
 

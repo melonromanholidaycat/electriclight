@@ -68,6 +68,7 @@ where one of these is missing.
 - Wiring, connectors, and the gauge of the run up the neck.
 - Whether the pot and five-way are wired to the existing controls or to
   dedicated ones, and what the five-way's resistor ladder looks like.
-- Flash size on the ESP32-S3 boards. It fixes the partition layout, which is one
-  of the few things a cable is needed to change — see
+- The exact ESP32-S3 board and its pinout. Flash size is settled — 4 MB is
+  enough, and the firmware is built for it — but the pin budget is not, and on a
+  small board that is the real constraint. See
   [`../firmware-plan.md`](../firmware-plan.md).

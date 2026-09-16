@@ -51,10 +51,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - flash: 16mb
-            defaults: sdkconfig.defaults
           - flash: 4mb
-            defaults: sdkconfig.defaults;sdkconfig.4mb
+            defaults: sdkconfig.defaults
+          - flash: 16mb
+            defaults: sdkconfig.defaults;sdkconfig.16mb
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

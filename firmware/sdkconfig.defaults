@@ -1,10 +1,14 @@
 CONFIG_IDF_TARGET="esp32s3"
 
 # Partitions. See firmware/partitions/ for why the layout matters more than
-# anything else in this file.
+# anything else in this file: it is the one thing a cable is needed to change.
+#
+# 4 MB is the default because that is what the boards in hand are. Build for a
+# 16 MB module with:
+#   idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.16mb" build
 CONFIG_PARTITION_TABLE_CUSTOM=y
-CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/16mb.csv"
-CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/4mb.csv"
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 
 # A new image must prove itself before it is trusted. Without this an OTA that
 # boots and then wedges is permanent, and the guitar is closed.

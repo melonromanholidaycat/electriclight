@@ -1,0 +1,8 @@
+# Overlay for a 16 MB module. Use with:
+#   idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.16mb" build
+#
+# CI builds this alongside the 4 MB default on every push, so neither layout can
+# quietly stop working.
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/16mb.csv"
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="16MB"
