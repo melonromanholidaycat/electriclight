@@ -14,6 +14,12 @@ CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
 CONFIG_HTTPD_MAX_REQ_HDR_LEN=1024
 CONFIG_HTTPD_MAX_URI_LEN=512
 
+# Optimise for size rather than debuggability. There is no debugger on the
+# finished instrument and no serial port to attach one to, so the smaller image
+# is worth more than the easier backtrace - and it is worth most of all on a
+# 4 MB module, where the app slots are half the size.
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=6144
 CONFIG_FREERTOS_HZ=1000
 

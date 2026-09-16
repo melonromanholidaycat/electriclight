@@ -52,8 +52,12 @@ The firmware needs ESP-IDF v5.4 and the generated page:
 
 ```sh
 node web/build.js                    # writes firmware/main/www/index.html.gz
-cd firmware && idf.py set-target esp32s3 && idf.py build
+cd firmware && idf.py set-target esp32s3 && idf.py build          # 16 MB module
+idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.4mb" build   # 4 MB module
 ```
+
+CI builds both, so the day the firmware stops fitting a 4 MB module is the day
+CI says so rather than the cabled session.
 
 CI runs all three on every push. On the default branch it also publishes
 `dist/index.html` to GitHub Pages, enabling Pages itself on the first run.

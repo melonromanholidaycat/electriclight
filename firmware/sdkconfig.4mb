@@ -1,0 +1,9 @@
+# Overlay for a 4 MB module. Use with:
+#   idf.py -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.4mb" build
+#
+# CI builds both this and the 16 MB default on every push, so the day the
+# firmware stops fitting in a 1.5 MB app slot is the day CI says so - rather
+# than the cabled session.
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions/4mb.csv"
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
