@@ -68,7 +68,7 @@ where one of these is missing.
 - Wiring, connectors, and the gauge of the run up the neck.
 - Whether the pot and five-way are wired to the existing controls or to
   dedicated ones, and what the five-way's resistor ladder looks like.
-- The exact ESP32-S3 board and its pinout. Flash size is settled — 4 MB is
-  enough, and the firmware is built for it — but the pin budget is not, and on a
-  small board that is the real constraint. See
-  [`../firmware-plan.md`](../firmware-plan.md).
+- Confirmation that the board's own pinout matches the published one for the
+  ESP32-S3 Super Mini. Flash and pins are both settled on paper — see
+  [`../firmware-plan.md`](../firmware-plan.md) — but these generic boards vary
+  between sellers and revisions.

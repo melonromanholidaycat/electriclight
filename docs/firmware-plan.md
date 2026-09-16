@@ -90,6 +90,36 @@ Both strips are separate runs, so:
 | battery sense | 1 | analog, via a divider |
 | microphone (reserved) | 3 | I²S needs BCLK, WS and DATA. Not 2 — PDM needs two but locks you into worse parts |
 
+### It fits the small board, with room over
+
+An ESP32-S3 Super Mini (`ESP32-S3FH4R2`, 22.5 × 18 mm) breaks out thirteen GPIO
+with no boot or system involvement: **1, 2, 4, 5, 6, 7, 8, 15, 16, 17, 18, 21,
+38**. Seven of those (1–8) are ADC1, which is where the three analog inputs have
+to live. Eight pins needed, thirteen available, and the ADC1 requirement is met
+twice over.
+
+A proposed map, provisional until the five-way's wiring is known:
+
+| pin | use | why |
+|---|---|---|
+| GPIO15 | LED data, bass strip | safe, digital |
+| GPIO16 | LED data, treble strip | safe, digital |
+| GPIO1 | potentiometer | ADC1_CH0 |
+| GPIO2 | five-way | ADC1_CH1 |
+| GPIO4 | battery sense | ADC1_CH3 |
+| GPIO17, 18, 21 | reserved for the microphone | I²S BCLK / WS / DATA |
+| GPIO5, 6, 7, 8, 38 | spare | three still on ADC1 |
+
+**GPIO48 carries an on-board WS2812.** That is worth more than it looks: the
+effect evaluator and the LED driver can both be brought up and checked against
+the golden vectors on a bare board, one pixel at a time, with no guitar, no
+strips and no cable session. It turns a chunk of step 4 from something that has
+to wait for hardware into something that does not.
+
+Native USB, no serial-converter chip, so flashing needs nothing but a USB-C
+cable — which also makes the pigtail-into-the-cavity insurance below cheaper: it
+is a USB-C extension, not a programming header.
+
 **The constraint that bites: ADC2 does not work while WiFi is active.** All
 three analog inputs must therefore be on **ADC1, which is GPIO1–GPIO10** on the
 ESP32-S3. That is ten pins for three jobs, so it is not tight, but putting the
@@ -106,10 +136,11 @@ Pins to keep clear:
   those three pins free — one of the few ways the smaller board is the better
   one here.
 
-Verify all of this against the pinout of the exact board before wiring anything.
-On a small board this is the constraint that actually bites, not flash: the
-whole budget is eight pins, three of which must be ADC1, and the small boards
-break out fewer pins than a DevKitC. The five-way's electrical arrangement is
+Verify all of this against the pinout that came with the actual board.
+Documentation for these generic boards is inconsistent between sellers, and pin
+diagrams, memory claims and LED wiring all differ between revisions — the
+listing for these ones advertises "WiFi 6", which the ESP32-S3 does not have, so
+its other claims deserve checking too. The five-way's electrical arrangement is
 also still unknown and needs checking when the guitar is open.
 
 Two more things to check on a small board, neither fatal and both worth knowing
