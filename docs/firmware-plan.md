@@ -162,14 +162,43 @@ The S3's RMT peripheral has four TX channels, so two LED strips are comfortable.
 3.5 V; the S3 drives 3.3 V. It often works and it is not dependable, especially
 as the data run up the neck is long.
 
-Options, roughly in order of preference:
+**Chosen: SN74AHCT125N**, quad bus buffer, DIP-14. Both strips fit one chip.
 
-1. A proper shifter — a 74AHCT125 covers four channels, and both strips fit in
-   one chip.
-2. Run the strip at ~4.3 V instead of 5 V, which brings its threshold under the
-   S3's output. Costs a little brightness, saves a part.
-3. A sacrificial first LED as a shifter. Works, widely used, ugly, and it means
-   a dead first pixel is now a dead strip.
+The family matters more than the part. **AHCT**, not AHC: the T means
+TTL-compatible input thresholds, so at a 5 V supply a logic high starts around
+2 V and a 3.3 V signal is read cleanly. Plain AHC uses CMOS thresholds — about
+3.5 V at a 5 V supply — and a 3.3 V signal sits right on the edge of them. The
+two parts are otherwise interchangeable and look identical in a parts drawer.
+
+Rejected: running the strips at ~4.3 V so their threshold falls under the S3's
+output, which saves the part at the cost of brightness; and the sacrificial
+first-LED trick, which works but turns a dead first pixel into a dead strip.
+With a real shifter in place the buck stays at a full 5 V.
+
+### How to wire it
+
+DIP-14 pinout, as standard for a 74x125: pin 1 `1OE`, 2 `1A`, 3 `1Y`, 4 `2OE`,
+5 `2A`, 6 `2Y`, 7 `GND`, 8 `3Y`, 9 `3A`, 10 `3OE`, 11 `4Y`, 12 `4A`, 13 `4OE`,
+14 `VCC`.
+
+- **Power it from the 5 V strip rail**, not from 3.3 V. Its output swinging to
+  5 V is the entire point.
+- `OE` is **active low**. Tie pins 1 and 4 to GND so the two used channels stay
+  enabled.
+- Feed GPIO15 into pin 2 and GPIO16 into pin 5; take strip data from pins 3
+  and 6.
+- **Do not leave the unused inputs floating.** Tie pins 9 and 12 to GND, and
+  pins 10 and 13 to VCC so those outputs stay disabled. A floating CMOS input
+  drifts to mid-rail and oscillates, which wastes current and injects noise into
+  a board that is already sharing a supply with several amps of LEDs.
+- 100 nF ceramic directly across pins 14 and 7, as close to the chip as it will
+  sit.
+- ~330 Ω in series with each output before it reaches the strip, to damp
+  reflections on the run up the neck.
+
+DIP-14 needs something to sit on — perfboard or a small proto board — and takes
+about 19 × 7 mm plus that. Not a problem in a Strat control cavity, but it is
+not a part that can be free-wired tidily.
 
 ## Power
 
