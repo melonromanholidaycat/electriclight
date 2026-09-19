@@ -30,6 +30,7 @@ docs/             specification, decisions, firmware plan, hardware photographs
 | [`docs/effect-format.md`](docs/effect-format.md) | what an effect is — the contract the firmware is held to |
 | [`docs/decisions.md`](docs/decisions.md) | why it is that way, what was rejected, and what would reopen it |
 | [`docs/firmware-plan.md`](docs/firmware-plan.md) | electrical consequences, and what the cabled session must get right |
+| [`docs/shopping-list.md`](docs/shopping-list.md) | every part to buy, indexed back to the reasoning |
 
 Each fact has exactly one home; the others link to it rather than restating it.
 `CLAUDE.md` is a pointer to `AGENTS.md`, not a second document.

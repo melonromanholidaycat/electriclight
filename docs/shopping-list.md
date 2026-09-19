@@ -1,0 +1,75 @@
+# Shopping list
+
+Every part the rebuild needs, in one place.
+
+**This file is an index, not a source of truth.** Each entry carries the minimum
+needed to buy the right thing and a pointer to where the reasoning lives. Where
+this file and a linked section disagree, **the linked section wins** — it is the
+one that explains itself, and an unexplained number is the one more likely to be
+stale.
+
+---
+
+## Have already
+
+| | |
+|---|---|
+| 3 × ESP32-S3 Super Mini | `ESP32-S3FH4R2`, 4 MB. Pinout and why it fits: [firmware-plan](firmware-plan.md) |
+| 10 × SN74AHCT125N, DIP-14 | Level shifter. **AHCT, not AHC** — [firmware-plan](firmware-plan.md) |
+| Multimeter | |
+
+## Still to buy
+
+### The one real decision
+
+**Buck converter**, and everything else on this list is cheap by comparison.
+
+| requirement | value |
+|---|---|
+| input | 6.0 – 8.4 V (six NiMH, flat to charged) |
+| output | 5.0 V |
+| current | **4 A continuous minimum, 5 A preferred** |
+| topology | synchronous, for efficiency and less heat in a closed cavity |
+| **enable pin** | **required** — the push-pull switch drives this rather than carrying the load |
+
+A 3 A module is not enough, and many cheap ones cannot hold 3 A in practice.
+Check the physical size against the control cavity before buying. If the only
+module you can find has no enable pin, say so before ordering — the workaround
+costs another part. Reasoning: [firmware-plan, Power](firmware-plan.md).
+
+### Power
+
+| item | qty | spec | why |
+|---|---|---|---|
+| AA NiMH cells | 6, plus spares | low self-discharge | [hardware](hardware/) — alkalines sag, and the old pack proved it |
+| Fuse + inline holder | 1 | **3 A** | nothing limits fault current today; [firmware-plan, Power](firmware-plan.md) |
+| Electrolytic capacitor | 1–2 | 1000 µF, 10 V or better | bulk near the strips |
+| Ceramic capacitors | ~10 | 100 nF | decoupling, plus one on the pot's ADC pin |
+
+### Wiring
+
+| item | qty | spec | why |
+|---|---|---|---|
+| Silicone wire | a few metres | **22 AWG** (20 if it fits) | 5 V and GND up the neck |
+| Silicone wire | a few metres | 26–28 AWG | two data lines, carry no current |
+| JST-XH connector, 6-way | 1 pair + crimps | | neck comes off with four bolts, not a soldering iron |
+| Heat shrink | assorted | | |
+
+### Small parts
+
+| item | qty | spec | why |
+|---|---|---|---|
+| Resistors | 2 | ~330 Ω | series on each LED data line, damps reflections |
+| Perfboard | 1 small piece | | the DIP-14 and its passives need somewhere to sit |
+| USB-C cable | 1 | **must carry data** | the board has no serial-converter chip, so the cable is the programmer |
+| USB-C extension or panel mount | 1 | | routed into the cavity: turns "borrow a laptop and disassemble the guitar" into "borrow a laptop" |
+
+## Deliberately not buying
+
+| | why |
+|---|---|
+| A replacement potentiometer | the A500K push-pull is the instrument's power switch. One 100 nF capacitor fixes the impedance — [firmware-plan](firmware-plan.md) |
+| A replacement battery holder | the existing one is restored to six-in-series. Only if rewiring proves impossible, and measure the routed cavity first |
+| LED strip | all 52 pixels verified working before teardown |
+| A microphone | deferred, and not committed to |
+| A replacement IMU | deferred. The fitted GY-61 is the wrong part, but nothing is built on it — [firmware-plan](firmware-plan.md) |
