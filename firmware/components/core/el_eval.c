@@ -129,13 +129,19 @@ static float warp_pos(float x, float centre, float amount)
     if (!(k > 0.0f) || !isfinite(k)) return xx;
     if (c <= 0.0f) return (float)pow((double)xx, (double)k);
     if (c >= 1.0f) return (float)(1.0 - pow(1.0 - (double)xx, (double)k));
+    // Two roundings per branch, not one. The JavaScript rounds the bracketed
+    // term to float32 before combining it with `c`, and collapsing that into a
+    // single double expression is the kind of tidying that makes the two
+    // evaluators differ in a way no golden vector will catch.
     if (xx < c) {
         float inner = (float)(1.0 - (double)(float)(xx / c));
-        return (float)((double)c * (1.0 - pow((double)inner, (double)k)));
+        float body = (float)(1.0 - pow((double)inner, (double)k));
+        return (float)((double)c * (double)body);
     }
     float denom = (float)(1.0 - (double)c);
     float inner = (float)((double)(float)(xx - c) / (double)denom);
-    return (float)((double)c + (double)denom * pow((double)inner, (double)k));
+    float body = (float)((double)denom * pow((double)inner, (double)k));
+    return (float)((double)c + (double)body);
 }
 
 static float smoothstep(float e0, float e1, float x)

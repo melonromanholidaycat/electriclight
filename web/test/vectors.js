@@ -76,8 +76,10 @@ pw   = pow(u + 0.1, k)
 lg   = log(u)
 sq   = sqrt(u - 0.5)
 tn   = tan(u * PI) * 0.001
+w0   = warp(u, 0, k - 2)
+w1   = warp(u, 1, 2 - k)
 v    = sat(0.15 * dz + 0.15 * mneg + 0.2 * nz + 0.2 * hz + 0.1 * pw + 0.05 * lg + 0.1 * sq + tn)
-h    = mod(fret * 37 - t * 90, 360)
+h    = mod(fret * 37 - t * 90 + 40 * w0 - 40 * w1, 360)
 s    = 1 - rnd * 0.5
 `,
 };

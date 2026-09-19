@@ -147,6 +147,13 @@ single-precision version changes **nothing** in all 104 golden frames, though
 `sinf` and `(float)sin` disagree on about 1.3% of inputs — two roundings, to
 float32 and then to 8 bits, absorb it.
 
+A second data point, found by reading the port back against the JavaScript
+rather than by running it: `warp` was rounding once where `eval.js` rounds
+twice, in a branch two shipped effects use. All 104 frames passed anyway, and
+still pass with the bug reinstated after adding cases that reach the branch.
+The vectors catch a branch that is *wrong*; they cannot catch one that is a
+rounding step short.
+
 So the vectors prove agreement on 104 frames; only the literal port gives
 equivalence. Equivalence is what lets the owner trust the simulator about an
 effect nobody has ever rendered on the guitar, which is the entire point of
