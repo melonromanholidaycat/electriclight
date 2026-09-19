@@ -196,6 +196,57 @@ before the guitar is closed:
 
 The S3's RMT peripheral has four TX channels, so two LED strips are comfortable.
 
+## The controls, and what becomes of them
+
+Three functions exist on two physical parts, and all three survive the rebuild.
+Nothing the instrument can do today becomes phone-only.
+
+| control | today | after |
+|---|---|---|
+| push-pull, pulled | power on/off, carrying the whole LED current | power on/off, driving the converter's enable pin — milliamps, not amps |
+| pot, rotated | brightness | master brightness by default; a preset may rebind it to any one named parameter |
+| rotary five-way | effect selector | selects one of five stored slots directly |
+
+What an effect actually sees of the last two is in
+[`effect-format.md`](effect-format.md); this section is about the parts.
+
+**Cutting power mid-write is safe by construction.** The push-pull kills the
+converter and therefore the board, with no warning and no shutdown. Settings
+live in NVS, which is built to survive losing power during a write, and an OTA
+caught half-written simply fails to become valid — the previous slot still
+boots. Neither needed extra work; both are worth knowing before someone asks.
+
+### The strips are the only status display
+
+Once the guitar is closed there is no other output. No serial port, no screen,
+and the board's own LED is sealed inside the cavity. So anything the instrument
+needs to tell someone standing in front of it — radio on, safe mode, a flat
+pack, an update applied — has to be said with the 52 LEDs it already has.
+
+That is a firmware design constraint rather than a hardware one, but it belongs
+here because it decides what the instrument can communicate at all.
+
+### Open: how the radio gets switched on without a phone
+
+The brief requires the radio off unless deliberately enabled. The only inputs
+available for "deliberately" are the pot and the five-way, and the only moment
+they can be read before the radio comes up is at power-on — which the push-pull
+makes a well-defined event.
+
+Candidates, in ascending order of how hard they are to trigger by accident:
+
+- **Five-way in one nominated position at switch-on.** Simplest, and far too
+  easy to hit by accident: that is where the switch happens to be left.
+- **Brightness at minimum at switch-on.** Nobody does that deliberately, and the
+  dark neck is its own feedback — but it *is* where the knob gets left.
+- **Both together.** Two coincidences rather than one. Easy to perform, unlikely
+  to happen.
+- **A gesture: sweep the five-way end to end within a few seconds of switch-on.**
+  Essentially impossible by accident, and needs no particular starting state.
+
+The last is the most robust and the least discoverable; the third is the best
+balance. This is a decision for step 3 rather than something to settle here.
+
 ## The potentiometer is 500 kΩ, and that needs handling
 
 It is an **A500K push-pull**, and its switch section is the instrument's power
