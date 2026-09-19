@@ -99,29 +99,37 @@ now. See [`../firmware-plan.md`](../firmware-plan.md) for what it costs in pins
 and why a different part is the answer when orientation work eventually
 happens.
 
-**No separate voltage regulator could be found.** Two conductors run from the
-battery cavity to the push-pull switch, and there is no regulator chip or module
-visible on the loom. The likeliest explanation is that the strips are fed from
-the Arduino Nano's own on-board linear regulator, which would explain the
-brief's long-standing suspicion that the present setup caps achievable
-brightness — a Nano's regulator can supply a few hundred milliamps at most, and
-drops the whole difference from the pack as heat.
+**No separate voltage regulator could be found**, and the question is now closed
+unanswered. Two conductors ran from the battery cavity to the push-pull switch
+with no regulator chip or module anywhere on the loom; the likeliest explanation
+was the Arduino Nano's own on-board linear regulator, which would have explained
+the long-standing suspicion that the old setup capped brightness. It could not
+be confirmed — the solder joints were poor enough that several conductors
+snapped during disassembly, before a measurement could be taken.
+
+It does not matter. **The rebuild feeds the strips 5 V because that is what they
+are specified for**, not because of anything the old build did. Reverse-
+engineering a previous owner's guess was only ever archaeology.
+
+One thing to carry forward, though: if the old setup *was* unregulated, the
+strips spent their life above their rated supply. All 52 were verified working
+immediately before teardown, so any damage is not yet visible — but if pixels
+start misbehaving once everything else is known good, "the tape is tired" is a
+reasonable hypothesis rather than an absurd one.
+
+**The original wiring is gone.** What replaces it is specified in
+[`../firmware-plan.md`](../firmware-plan.md) rather than inherited, which is an
+improvement: the old run was sized for whatever the Nano's regulator could
+deliver, and the rebuild asks for considerably more.
 
 ## Still to check
 
-Open until the guitar is opened. Nothing should be designed around an assumption
-where one of these is missing.
+Nothing should be designed around an assumption where one of these is missing.
 
-- **The voltage on a strip's 5 V conductor with the system powered on.** One
-  measurement, and it settles whether anything regulates the pack down at all.
-  Around 5 V means a regulator exists somewhere; around 9 V means the strips
-  have been running well over their rated supply.
-- **Which IMU is taped beside the Nano** — a marking on the chip or the
-  breakout's silkscreen. It decides whether it is I²C (two pins) or SPI (four),
-  and the pin budget assumes I²C.
-- The gauge of the conductors running up the neck. They were sized for whatever
-  the old setup could drive, which was probably a fraction of what the rebuild
-  will.
+- **Where the conductors snapped.** A break anywhere along the run is nothing —
+  that wiring is being replaced regardless. A break at the tape's own solder pads
+  on the fretboard is the one repair here that is genuinely delicate.
+
 - The exact strip part, if the reel or tape carries a marking. Taken as
   WS2812B-equivalent for now: 5 V, three-wire, individually addressable.
 - Confirmation that the new board's own pinout matches the published one for the

@@ -280,6 +280,38 @@ DIP-14 needs something to sit on — perfboard or a small proto board — and ta
 about 19 × 7 mm plus that. Not a problem in a Strat control cavity, but it is
 not a part that can be free-wired tidily.
 
+## The run up the neck
+
+The original wiring did not survive disassembly, so this is a specification
+rather than something inherited — which is the better position to be in, since
+the old run was sized for whatever a Nano's regulator could deliver.
+
+**Four conductors, not six.** Both strips share one 5 V and one ground, with a
+data line each. The ground has to be common anyway, because WS2812 data is
+referenced to it, and sharing the positive costs nothing: for a given amount of
+copper, one conductor of twice the area carrying twice the current drops exactly
+the same voltage as two separate ones. Two fewer wires to route through the
+channel, and the pair can be thicker.
+
+| conductor | gauge | why |
+|---|---|---|
+| 5 V | 22 AWG, 20 AWG if it fits | 3.1 A worst case over ~0.5 m is 0.08 V at 22 AWG, half that at 20 |
+| GND | same as 5 V | carries the same current back |
+| data ×2 | 26–28 AWG | carries no current worth the name |
+
+Silicone insulation rather than PVC: thinner wall for the same conductor, and far
+more flexible in a routed channel.
+
+**Put a connector in the neck pocket.** The neck comes off with four bolts; it
+should not also require a soldering iron. A 6-way JST-XH with the 5 V and ground
+doubled up across two pins each keeps every contact inside its rating without
+relying on the software brightness ceiling to stay there.
+
+**Strain-relieve both ends.** The joints that failed here failed because nothing
+held the wire except the solder, and solder is not a mechanical fixing. A cable
+tie anchored to something solid, or a blob of hot glue over the joint, costs
+nothing at build time and is the difference between this happening again and not.
+
 ## Power
 
 Worst case is **every LED at full white: 3.1 A at 5 V**, about 15.6 W, which
