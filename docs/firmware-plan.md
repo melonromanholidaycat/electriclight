@@ -117,27 +117,38 @@ detectable fault rather than a plausible-looking wrong answer.
 
 ### The two deferred sensors, and where the budget runs out
 
-There is **already an IMU in the guitar**, taped beside the Nano, from an
-earlier attempt at orientation-reactive effects. It is not to be built on now,
-but it is mounted and wired, so the cheap move during the rebuild is to connect
-it and leave it alone: an IMU is I²C, two pins, and it costs nothing to keep the
-option alive when the alternative is opening the guitar again.
+There is a **GY-61 already in the guitar**, taped beside the Nano. It is an
+ADXL335 — a three-axis *analogue accelerometer*, not the gyroscope it has been
+called. It is deferred and not to be built on now.
 
-| configuration | pins | spare |
-|---|---|---|
-| base — strips, pot, battery, five-way | 9 | 4 |
-| plus the IMU (I²C) | 11 | 2 |
-| plus a microphone (I²S) | 14 | **over by one** |
-| both, with the five-way as a resistor ladder | 10 | 3 |
+It is an expensive part to keep, because its three analogue outputs land on the
+scarcest resource here: **ADC1 has only seven safe pins, and the pot and battery
+sense already take two.**
 
-So both deferred sensors together do not fit while the five-way eats five pins.
-**Four resistors at the switch turn it into a ladder on one ADC pin**, and that
-is the escape hatch.
+| configuration | total pins | ADC1 of 7 | verdict |
+|---|---|---|---|
+| base — strips, pot, battery, five-way | 9 | 2 | 4 spare |
+| plus the GY-61 (three analogue) | 12 | 5 | 1 spare |
+| plus a microphone (I²S, three digital) | 15 | 5 | **over by two** |
+| both, five-way as a resistor ladder | 11 | 6 | 2 spare |
+| both, with a 6-axis I²C part instead of the GY-61 | 10 | 2 | 3 spare |
 
-It does not need doing speculatively, and should not be. The crunch only arrives
-when a microphone is added, and adding a microphone means mounting one, which
-means the guitar is open anyway — the same afternoon the resistors would go in.
-Nothing is foreclosed by leaving it.
+**Do not wire the GY-61 during the rebuild.** An earlier revision of this file
+said to connect it on the grounds that it was cheap — that was written believing
+it was an I²C part costing two digital pins. Three ADC1 channels for a sensor
+that cannot do the job is not cheap, and leaving it unwired costs nothing: it
+stays physically mounted, and whoever revisits orientation effects will have the
+guitar open to fit a better part anyway.
+
+When that happens, a 6-axis I²C IMU — MPU-6050, LSM6DS3, ICM-42688 — is the
+answer, and it wins twice over: a gyroscope lets sensor fusion separate gravity
+from movement, which is the thing the ADXL335 physically cannot do, and it
+occupies two digital pins instead of three analogue ones. Same size, same money.
+
+**Four resistors at the switch turn the five-way into a ladder on one ADC pin**,
+and that remains the escape hatch for the pin budget. It still does not need
+doing speculatively: the crunch only arrives when a second sensor is fitted, and
+fitting one means the guitar is open that same afternoon.
 
 **GPIO48 carries an on-board WS2812.** That is worth more than it looks: the
 effect evaluator and the LED driver can both be brought up and checked against

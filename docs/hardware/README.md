@@ -18,6 +18,7 @@ figure here and the build fails until the code agrees.
 | `controls-rotary-switch.jpg` | the dedicated rotary switch for the LEDs |
 | `controls-rotary-switch-detail.jpg` | the same from the side |
 | `neck-pocket-wiring.jpg` | where the strips enter the body: three conductors per strip |
+| `gy-61-accelerometer.jpg` | the sensor beside the Nano, silkscreen legible |
 
 What the close-up settles:
 
@@ -81,12 +82,22 @@ higher source impedance than the ESP32's ADC likes, and the `A` means a
 logarithmic taper, which interacts with the gamma already in the output chain.
 The push-pull is worth keeping — it is the only power switch the instrument has.
 
-**The blue-taped module beside the Nano is an IMU**, not a regulator, left from
-an earlier attempt at orientation-reactive effects — which worked, but only
-partly. It is deferred in the same way audio-reactive lighting is: not to be
-built on now. It is already mounted and wired, though, which makes it worth
-connecting during the rebuild rather than removing. Its exact part is still
-unknown; most such modules are I²C.
+**The blue-taped module beside the Nano is a GY-61**, not a regulator. Its
+silkscreen reads `VCC X_OUT Y_OUT Z_OUT GND`, which identifies it as an
+**ADXL335: a three-axis analogue accelerometer**. Not a gyroscope, despite the
+name it has been going by, and that distinction is the whole story of why the
+orientation effects built on it only half worked.
+
+An accelerometer alone cannot separate tilt from movement. Both arrive as
+acceleration on the same three axes, so gravity — the thing you want, because it
+tells you which way the guitar is pointing — is inseparable from strumming,
+walking and every knock against a strap. No amount of firmware fixes that; the
+information is not in the signal.
+
+It is deferred in the same way audio-reactive lighting is: not to be built on
+now. See [`../firmware-plan.md`](../firmware-plan.md) for what it costs in pins
+and why a different part is the answer when orientation work eventually
+happens.
 
 **No separate voltage regulator could be found.** Two conductors run from the
 battery cavity to the push-pull switch, and there is no regulator chip or module
