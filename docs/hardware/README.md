@@ -24,6 +24,16 @@ figure here and the build fails until the code agrees.
 | `battery-holder-contacts.jpg` | the underside: contact tabs and the links between them |
 | `board-front.jpg` | the ESP32-S3 Super Mini, header labels legible |
 | `board-back.jpg` | its underside: board revision, pin list, B+/B- pads |
+| `board-datasheet-callouts.jpg` | the seller's numbered feature diagram, front and back |
+| `board-datasheet-pinout.jpg` | the seller's pinout, both rows, with per-pin peripherals |
+| `board-datasheet-specs.jpg` | the seller's stated specification |
+| `board-datasheet-power.jpg` | the seller's power options, and the warning about them |
+
+The four `board-datasheet-*` images are **the seller's material, not measurements.**
+They are kept because they are the only per-pin reference that matches this exact
+revision, and because two of them say things nothing else here says. They do not
+outrank anything measured on the board: where they disagree with it, they are
+noted as unconfirmed below.
 
 What the close-up settles:
 
@@ -78,7 +88,46 @@ name describes a revision with far more pins broken out, and following it would
 have put LED data on GPIO15 and 16, which this board does not have.
 
 It is definitely an S3 and not a C3: the underside silkscreen lists GPIO33–48,
-and a C3 stops at 21. The red `C3` on the front edge is a component designator.
+and a C3 stops at 21.
+
+**The red `C3` on the front edge is the 2.4 GHz ceramic antenna**, item 5 in the
+seller's callout diagram. Earlier notes here and in conversation called it a
+component designator, which was wrong twice over — it is a part, and it is the
+part the whole wireless design depends on. Its position has a consequence that
+belongs in [`../firmware-plan.md`](../firmware-plan.md): it sits at the board
+edge, and a Strat control cavity is very often lined with conductive shielding
+paint.
+
+**Both buttons are present: BOOT and RESET**, items 6 and 7. The seller gives the
+download-mode procedure as *hold BOOT, then press RESET*. The flasher page had
+been hedging about whether a RESET button existed; it no longer needs to.
+
+**The `3V3` pin is labelled `3V3(OUT)`** in the seller's pinout — an output of
+the on-board regulator. Independent agreement with the 3.3 V measured on the pin
+whose silkscreen reads `CV3`.
+
+**2 MB PSRAM.** The part is an `ESP32-S3FH4R2`: 4 MB flash, 2 MB PSRAM, 512 KB
+SRAM. The firmware does not enable PSRAM and does not need it — the whole render
+engine addresses 52 pixels — but it is there if something later does.
+
+### The extra pins, and why the budget may be less tight than written
+
+The seller's pinout shows a **second row of pads on the underside** carrying
+GPIO14–18, 21, and 33–48. The outer row — the one that takes pin headers, and
+the one confirmed on the actual board — is GPIO1–13 plus RX/TX, 3V3, GND and 5V,
+exactly as recorded above.
+
+**Unconfirmed.** This comes from seller material, and the reason this section
+exists at all is that a published pinout for this board name was already wrong
+once. Nothing should be designed around it until someone looks at the underside
+of the board in hand and counts. It is recorded because it would change a
+conclusion drawn elsewhere: the pin budget in
+[`../firmware-plan.md`](../firmware-plan.md) treats spare pins as scarce, and
+the two deferred sensors were partly deferred on those grounds.
+
+It changes nothing about the pin map in use. GPIO12 and 13 carry LED data
+because they are ADC2-only and therefore useless for analogue once WiFi is up,
+not because nothing else was free.
 
 **The pin between GPIO13 and GND reads `CV3` rather than `3V3`. Measured at
 3.3 V against GND over USB — it is the 3.3 V rail, and the silkscreen is a

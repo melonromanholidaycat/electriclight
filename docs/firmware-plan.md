@@ -222,10 +222,20 @@ also still unknown and needs checking when the guitar is open.
 Two more things to check on a small board, neither fatal and both worth knowing
 before the guitar is closed:
 
-- **The antenna is a PCB trace with no external connector.** WiFi is the only
-  transport there is, and it will be working from inside a wooden cavity next to
-  a battery pack. Wood is not much of an obstacle, but this is worth confirming
-  at the cabled session rather than at a rehearsal.
+- **The antenna is a ceramic chip at the board's front edge**, with no external
+  connector — the red part marked `C3`, identified from the seller's callout
+  diagram in [`hardware/`](hardware/). WiFi is the only transport there is.
+  Wood is not much of an obstacle; **conductive shielding paint is**, and a Strat
+  control cavity is very often lined with it. That is a Faraday cage with the
+  only radio in the instrument inside it.
+
+  So: **check the cavity for shielding paint or foil before mounting anything**,
+  and if it is there, mount the board with its antenna edge pointing at the
+  pickguard opening rather than buried against a painted wall — or scrape a
+  window in the paint behind the antenna. This is cheap while the guitar is
+  open and close to impossible afterwards, and the failure it prevents is the
+  worst one available: an instrument that is unreachable precisely because it is
+  assembled.
 - **The on-board 3.3 V regulator is small.** The S3 pulls several hundred
   milliamps in bursts while transmitting, which is exactly when a marginal
   supply browns out. The decoupling already planned matters more here.
@@ -554,6 +564,25 @@ it is diagnosing — which means it needs to be readable in safe mode too.
 does not help the phone, but it turns "borrow a laptop *and* disassemble the
 guitar" into "borrow a laptop". Given how much of this project's design bends
 around scarce cable access, it is the best few euros available.
+
+### Switch the guitar off before plugging that cable in
+
+The seller's own documentation says it outright: **do not connect USB power and
+external power at the same time.** See `board-datasheet-power.jpg` in
+[`hardware/`](hardware/). With a pigtail routed into the cavity, that stops
+being a bench warning and becomes an operating rule for the finished instrument,
+because both supplies are permanently wired.
+
+The design already makes this safe to obey, which is worth noting because it was
+not designed for this. The push-pull switch drives the converter's **enable**
+pin rather than carrying the load, so switching the guitar off shuts the
+converter down and takes 5 V off the rail entirely — leaving USB as the only
+source. The rule is therefore just: **pull the knob out before the cable goes
+in.** The strips stay dark, which is correct: USB cannot feed them anyway.
+
+This is also a reason not to accept a converter without an enable pin. Without
+one, the switch has to break the 5 V rail itself, and then "off" depends on a
+switch rated for several amps doing its job rather than on a logic pin.
 
 ## The two sessions
 

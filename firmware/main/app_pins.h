@@ -4,10 +4,14 @@
 // Photographs in docs/hardware/. Nothing is connected to these yet, and the
 // firmware is built to behave sensibly when nothing is.
 //
-// This board (HW-747 V0.0.2 "Super Mini") brings out GPIO1-13 on its headers,
-// plus RX/TX, 3V3, GND and 5V. It does NOT bring out 14-21 or 33-48, which an
-// earlier version of this file assumed. GPIO3 is a strapping pin and is left
-// alone, leaving twelve usable.
+// This board (HW-747 V0.0.2 "Super Mini") brings out GPIO1-13 on the outer
+// header rows, plus RX/TX, 3V3, GND and 5V. GPIO3 is a strapping pin and is
+// left alone, leaving twelve usable.
+//
+// The seller's pinout shows a second row of pads on the underside carrying
+// GPIO14-18, 21 and 33-48. Unconfirmed on the board in hand, and deliberately
+// not designed around: a published pinout for this board name was already wrong
+// once. See docs/hardware/. It would not change the choices below in any case.
 //
 // GPIO1-10 are ADC1, the only converter that keeps working once WiFi is up.
 // GPIO11-13 are ADC2 only, which makes them useless for analogue here - so
