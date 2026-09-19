@@ -16,6 +16,8 @@ idf_component_register(
         "app_inputs.c"
         "app_mode.c"
         "app_selftest.c"
+        "app_leds.c"
+        "app_render.c"
     INCLUDE_DIRS "."
     EMBED_FILES "www/index.html.gz"
     REQUIRES
@@ -30,6 +32,7 @@ idf_component_register(
         esp_system
         esp_adc
         driver
+        esp_driver_rmt
         core
         json
 )

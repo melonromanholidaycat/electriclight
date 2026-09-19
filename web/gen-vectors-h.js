@@ -48,6 +48,7 @@ export function generate() {
   L.push('#pragma once');
   L.push('#include <math.h>');
   L.push('#include <stdbool.h>');
+  L.push('#include <stddef.h>'); // NULL, for the entries that take no parameters
   L.push('#include <stdint.h>');
   L.push('');
   L.push(`#define EL_VECTORS_FORMAT_VERSION ${v.formatVersion}`);

@@ -11,6 +11,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generate as generateVectorHeader } from './gen-vectors-h.js';
 import { generate as generateFlasher } from './gen-flasher.js';
+import { generate as generateDefaultEffects } from './gen-default-effects.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = join(here, 'src');
@@ -102,10 +103,14 @@ const vec = generateVectorHeader();
 // manifests and leaves the .bin files to whoever has an ESP-IDF toolchain.
 const flash = generateFlasher(outDir);
 
+// The five effects a board plays before anyone has given it any.
+const defaults = generateDefaultEffects();
+
 const kb = (page.length / 1024).toFixed(1);
 console.log(`dist/index.html  ${kb} kB  (${(gz.length / 1024).toFixed(1)} kB gzipped, embedded for the firmware)`);
 console.log(`firmware golden vectors  ${vec.cases} cases  (${(vec.bytes / 1024).toFixed(1)} kB of C)`);
 console.log(`dist/flash.html  web flasher, ${flash.variants} layouts, build ${flash.version}`);
+console.log(`firmware default effects  ${defaults.names.join(', ')}`);
 if (page.length > 400 * 1024) {
   console.error('Bundle is too large to embed comfortably in firmware flash.');
   process.exit(1);

@@ -17,9 +17,11 @@
 #include "app_log.h"
 #include "app_mode.h"
 #include "app_ota.h"
+#include "app_render.h"
 #include "app_selftest.h"
 #include "app_wifi.h"
 #include "esp_app_desc.h"
+#include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -55,6 +57,14 @@ void app_main(void)
         ESP_ERROR_CHECK(app_http_start());
     } else {
         ESP_LOGI(TAG, "radio is off, so nothing is being served");
+    }
+
+    // Lights before the settle window, not after. An instrument that takes ten
+    // seconds to do anything visible looks broken, and the render loop runs on
+    // the other core so it costs the network nothing.
+    esp_err_t lit = app_render_start();
+    if (lit != ESP_OK) {
+        ESP_LOGE(TAG, "the render loop did not start: %s", esp_err_to_name(lit));
     }
 
     // Give the network a moment to settle before deciding whether this image

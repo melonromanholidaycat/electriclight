@@ -7,10 +7,13 @@
 #include "app_identity.h"
 #include "app_log.h"
 #include "app_mode.h"
+#include "app_leds.h"
 #include "app_ota.h"
+#include "app_render.h"
 #include "app_selftest.h"
 #include "app_wifi.h"
 #include "cJSON.h"
+#include "el_engine.h"
 #include "esp_app_desc.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
@@ -64,6 +67,22 @@ static esp_err_t get_status(httpd_req_t *req)
     // Whether this firmware's evaluator still reproduces the golden vectors.
     // Cached from boot: re-running it costs a second or two, and /api/status
     // gets polled.
+    // What a frame actually costs, which was an estimate until there was
+    // hardware to ask.
+    app_render_stats_t fr;
+    app_render_stats(&fr);
+    cJSON *render = cJSON_AddObjectToObject(root, "render");
+    cJSON_AddNumberToObject(render, "frames", fr.frames);
+    cJSON_AddNumberToObject(render, "late", fr.late);
+    cJSON_AddNumberToObject(render, "lastUs", fr.last_us);
+    cJSON_AddNumberToObject(render, "worstUs", fr.worst_us);
+    cJSON_AddNumberToObject(render, "avgUs", fr.avg_us);
+    cJSON_AddNumberToObject(render, "budgetUs", 1000000 / EL_FRAME_RATE);
+    cJSON_AddNumberToObject(render, "currentMa", fr.current_ma);
+    cJSON_AddBoolToObject(render, "limited", fr.limited);
+    cJSON_AddNumberToObject(render, "slot", fr.slot);
+    cJSON_AddStringToObject(render, "effect", fr.effect ? fr.effect : "none");
+
     const app_selftest_t *st = app_selftest_get();
     cJSON *self = cJSON_AddObjectToObject(root, "selftest");
     cJSON_AddBoolToObject(self, "ran", st->ran);
@@ -143,6 +162,9 @@ static esp_err_t post_ota(httpd_req_t *req)
     httpd_resp_sendstr(req, "{\"ok\":true,\"rebooting\":true}");
 
     ESP_LOGW(TAG, "restarting into the new image");
+    // Otherwise the neck holds its last frame through the reboot, which looks
+    // like the update hung at exactly the moment nobody wants to see that.
+    app_leds_blank();
     vTaskDelay(pdMS_TO_TICKS(500));
     esp_restart();
     return ESP_OK;
