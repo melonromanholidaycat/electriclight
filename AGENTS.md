@@ -97,6 +97,11 @@ that the effect system can read.
 Reserve a couple of pins and some physical space so a digital microphone could be
 added in a later session — that is the whole cost of keeping the door open.
 
+**Deferred: orientation-reactive lighting.** An IMU is already fitted, from an
+earlier attempt that half worked. Same status as audio: do not build on it. It
+is already mounted and wired, so connecting it during the rebuild costs two pins
+and keeps the option alive without another teardown.
+
 ---
 
 ## Architecture

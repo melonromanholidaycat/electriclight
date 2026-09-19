@@ -81,6 +81,13 @@ higher source impedance than the ESP32's ADC likes, and the `A` means a
 logarithmic taper, which interacts with the gamma already in the output chain.
 The push-pull is worth keeping — it is the only power switch the instrument has.
 
+**The blue-taped module beside the Nano is an IMU**, not a regulator, left from
+an earlier attempt at orientation-reactive effects — which worked, but only
+partly. It is deferred in the same way audio-reactive lighting is: not to be
+built on now. It is already mounted and wired, though, which makes it worth
+connecting during the rebuild rather than removing. Its exact part is still
+unknown; most such modules are I²C.
+
 **No separate voltage regulator could be found.** Two conductors run from the
 battery cavity to the push-pull switch, and there is no regulator chip or module
 visible on the loom. The likeliest explanation is that the strips are fed from
@@ -98,8 +105,9 @@ where one of these is missing.
   measurement, and it settles whether anything regulates the pack down at all.
   Around 5 V means a regulator exists somewhere; around 9 V means the strips
   have been running well over their rated supply.
-- **What the blue-taped component beside the Nano is** (`nano-and-loom.jpg`,
-  top of frame). It is the only thing on the loom that could be a regulator.
+- **Which IMU is taped beside the Nano** — a marking on the chip or the
+  breakout's silkscreen. It decides whether it is I²C (two pins) or SPI (four),
+  and the pin budget assumes I²C.
 - The gauge of the conductors running up the neck. They were sized for whatever
   the old setup could drive, which was probably a fraction of what the rebuild
   will.

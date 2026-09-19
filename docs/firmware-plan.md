@@ -113,9 +113,31 @@ closes, with one spare:
 
 Reading the switch as five inputs needs no new components and cannot be
 misread — exactly one input is low at a time, and none-low or several-low is a
-detectable fault rather than a plausible-looking wrong answer. **If the pin
-budget ever gets tight, four resistors at the switch turn it into a ladder on
-one ADC pin**, freeing four. Not worth doing while a spare pin exists.
+detectable fault rather than a plausible-looking wrong answer.
+
+### The two deferred sensors, and where the budget runs out
+
+There is **already an IMU in the guitar**, taped beside the Nano, from an
+earlier attempt at orientation-reactive effects. It is not to be built on now,
+but it is mounted and wired, so the cheap move during the rebuild is to connect
+it and leave it alone: an IMU is I²C, two pins, and it costs nothing to keep the
+option alive when the alternative is opening the guitar again.
+
+| configuration | pins | spare |
+|---|---|---|
+| base — strips, pot, battery, five-way | 9 | 4 |
+| plus the IMU (I²C) | 11 | 2 |
+| plus a microphone (I²S) | 14 | **over by one** |
+| both, with the five-way as a resistor ladder | 10 | 3 |
+
+So both deferred sensors together do not fit while the five-way eats five pins.
+**Four resistors at the switch turn it into a ladder on one ADC pin**, and that
+is the escape hatch.
+
+It does not need doing speculatively, and should not be. The crunch only arrives
+when a microphone is added, and adding a microphone means mounting one, which
+means the guitar is open anyway — the same afternoon the resistors would go in.
+Nothing is foreclosed by leaving it.
 
 **GPIO48 carries an on-board WS2812.** That is worth more than it looks: the
 effect evaluator and the LED driver can both be brought up and checked against
