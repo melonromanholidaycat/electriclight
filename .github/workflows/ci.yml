@@ -82,6 +82,15 @@ jobs:
       # Downloadable so a firmware image can be uploaded to the guitar from the
       # phone's Files app when the normal path is broken. That fallback only
       # exists if the image is easy to get hold of.
+      #
+      # ota_data_initial.bin is in the list because leaving it out breaks the one
+      # scenario a cable is for. It is the partition that records which app slot
+      # to boot. On a virgin chip that partition is erased and the bootloader
+      # falls back to ota_0, so a first flash works without it - but once the
+      # guitar has taken a single OTA it is running from ota_1, and a rescue
+      # flash that writes ota_0 and leaves this alone boots the broken image
+      # again. The cable session would achieve nothing, on a board with no
+      # serial console to say why.
       - uses: actions/upload-artifact@v4
         with:
           name: firmware-esp32s3-${{ matrix.flash }}
@@ -89,6 +98,7 @@ jobs:
             firmware/build/electriclight.bin
             firmware/build/bootloader/bootloader.bin
             firmware/build/partition_table/partition-table.bin
+            firmware/build/ota_data_initial.bin
           if-no-files-found: error
 
   deploy:

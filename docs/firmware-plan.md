@@ -322,8 +322,9 @@ was turned all the way up. Taking the reference from the same rail the converter
 uses also makes the reading ratiometric, so supply droop moves both and the
 brightness does not wander.
 
-On this board that rail is the pin whose silkscreen reads `CV3`; confirm it with
-a meter before soldering, per [`hardware/`](hardware/).
+On this board that rail is the pin whose silkscreen reads `CV3` — measured at
+3.3 V, so the label is a typo and the pin is the one to use. See
+[`hardware/`](hardware/).
 
 The other fix is one component: **100 nF from the ADC pin to GND**, plus
 multisampling in firmware. The capacitor becomes the charge reservoir the converter samples

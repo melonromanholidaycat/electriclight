@@ -80,11 +80,12 @@ have put LED data on GPIO15 and 16, which this board does not have.
 It is definitely an S3 and not a C3: the underside silkscreen lists GPIO33–48,
 and a C3 stops at 21. The red `C3` on the front edge is a component designator.
 
-**The pin between GPIO13 and GND reads `CV3` rather than `3V3`.** Its position
-says it is the 3.3 V rail — that is where every variant of this board puts it,
-between the GPIO run and ground — and a silkscreen typo on a board of this price
-is unremarkable. But a pin whose label cannot be read is not one to wire to on
-faith, and this one is needed: see the open questions below.
+**The pin between GPIO13 and GND reads `CV3` rather than `3V3`. Measured at
+3.3 V against GND over USB — it is the 3.3 V rail, and the silkscreen is a
+typo.** Its position said as much, between the GPIO run and ground, which is
+where every variant of this board puts it. It was measured rather than assumed
+because the potentiometer's top end connects to it, and the ESP32's analogue
+inputs are not 5 V tolerant.
 
 ## The controls, as found
 
@@ -186,16 +187,6 @@ deliver, and the rebuild asks for considerably more.
 ## Still to check
 
 Nothing should be designed around an assumption where one of these is missing.
-
-- **What the `CV3` pin actually is.** Power the board over USB and measure it
-  against GND: around 3.3 V and it is the 3.3 V rail, as its position suggests.
-  This matters because the potentiometer is a divider and its top end has to
-  come from that rail — see [`../firmware-plan.md`](../firmware-plan.md).
-
-- **How many cells the holder actually takes, and whether it is wired in series
-  or as parallel banks.** This decides whether the rebuild needs a buck converter
-  or a boost one, and a buck cannot step 4.5 V up to 5 V. It is the last thing
-  that could change what to buy.
 
 - The exact strip part, if the reel or tape carries a marking. Taken as
   WS2812B-equivalent for now: 5 V, three-wire, individually addressable.

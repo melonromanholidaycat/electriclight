@@ -1,6 +1,9 @@
-# Fallback layout if the boards turn out to be 4 MB. Workable, but every
-# partition is tight, and the app slots leave little room for the evaluator and
-# the embedded page to grow. Prefer 16 MB modules.
+# The layout in use. The fitted boards are ESP32-S3FH4R2, 4 MB.
+#
+# An earlier note here said to prefer 16 MB modules because the app slots would
+# be tight. That was wrong: with the evaluator, the golden vectors and the
+# embedded page all in, the image is 877 kB against a 1.5 MB slot - 44% free.
+# The 16 MB overlay stays for boards that have it, not because this needs it.
 #
 # Name,     Type, SubType,  Offset,   Size,     Flags
 nvs,        data, nvs,      0x9000,   0x6000,
