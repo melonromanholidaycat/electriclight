@@ -13,13 +13,17 @@
 
 import { FORMAT_VERSION } from './ops.js';
 
-const MAGIC = 0x584c4645; // "ELFX" little-endian
+// Written and read one byte at a time on purpose. Setting a u32 and calling it
+// "ELFX little-endian" is how this field spent its first week actually spelling
+// "EFLX": the byte order of a character constant is not something either side
+// of the wire should have to reason about.
+const MAGIC = [0x45, 0x4c, 0x46, 0x58]; // "ELFX"
 
 export function encodeProgram(p) {
   const size = 12 + p.consts.length * 4 + p.code.length;
   const buf = new ArrayBuffer(size);
   const dv = new DataView(buf);
-  dv.setUint32(0, MAGIC, true);
+  for (let i = 0; i < 4; i++) dv.setUint8(i, MAGIC[i]);
   dv.setUint8(4, p.version);
   dv.setUint8(5, p.nLocals);
   dv.setUint8(6, p.stack);
@@ -34,7 +38,9 @@ export function encodeProgram(p) {
 
 export function decodeProgram(bytes, params = []) {
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (dv.getUint32(0, true) !== MAGIC) throw new Error('not an effect program');
+  for (let i = 0; i < 4; i++) {
+    if (dv.getUint8(i) !== MAGIC[i]) throw new Error('not an effect program');
+  }
   const version = dv.getUint8(4);
   if (version !== FORMAT_VERSION) throw new Error(`effect format v${version}, expected v${FORMAT_VERSION}`);
   const nLocals = dv.getUint8(5);

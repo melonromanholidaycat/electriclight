@@ -125,8 +125,57 @@ float32 everywhere; division or modulo by zero yields 0; non-finite results of
 divisions and calls collapse to 0; `mod` is GLSL-style. A NaN pixel is far worse
 than a wrong one, and the two evaluators have to agree.
 
-float32 is free on the S3 because it has an FPU — which retroactively justifies
-choosing it over the C3.
+*Correction, step 4:* an earlier note here said float32 is free on the S3
+because it has an FPU. The S3's FPU is **single precision only**, and that turns
+out to matter, because the firmware evaluator computes in double wherever the
+JavaScript does — see the next decision. Those doubles are emulated in software.
+Measured cost: the full golden-vector run takes about 34 ms on a desktop, and
+the heaviest single frame is well inside the 16.7 ms a 60 Hz frame allows even
+after scaling for the S3. The FPU is still the reason to prefer the S3 over the
+C3; it is just not the whole story.
+
+## The firmware evaluator is a literal port, not a reimplementation
+
+`el_eval.c` reproduces `eval.js` operation by operation: double where the
+JavaScript is double, float32 where it rounds, `uint32_t` where it uses bitwise
+operators, `floor(x + 0.5)` where it calls `Math.round`. It is slower and uglier
+than a natural C evaluator would be.
+
+**Why, when the output is only 8 bits per channel:** because the golden vectors
+cannot tell the difference. Replacing every transcendental with its
+single-precision version changes **nothing** in all 104 golden frames, though
+`sinf` and `(float)sin` disagree on about 1.3% of inputs — two roundings, to
+float32 and then to 8 bits, absorb it.
+
+So the vectors prove agreement on 104 frames; only the literal port gives
+equivalence. Equivalence is what lets the owner trust the simulator about an
+effect nobody has ever rendered on the guitar, which is the entire point of
+having a simulator. The same measurement says the residual risk from the host's
+libm and newlib's disagreeing in the last double bit is far smaller still.
+
+**What would reopen it:** a per-frame budget problem on real hardware. The fix
+then is to do less work per frame, not to quietly drop to float — that trades
+away the property the project is built on.
+
+## The guitar checks itself, and reports rather than decides
+
+The golden vectors are compiled into the firmware (about 21 kB including the
+code). `GET /api/selftest` runs them on demand; a fresh image runs them once,
+after it has already confirmed itself.
+
+**Why on the device at all**, when CI runs the same check: CI cannot see a
+miscompile at a different optimisation level, a half-written OTA, flash that has
+started to rot, or a build where the generated vectors and the evaluator came
+from different commits. The guitar has no serial console, so without this the
+only way to ask whether the firmware still renders what the browser drew is to
+notice that a gig looked wrong.
+
+**Why it does not gate the rollback decision:** a self-test that crashed would
+turn one wrong pixel into a boot loop, and a slow one would delay confirming an
+image that is working fine. What to do about a failure is a decision made on a
+phone, not in the dark. It runs only on a new image because an unchanged
+firmware has an unchanged answer, and the answer costs seconds of emulated
+double arithmetic.
 
 ## The knob goes in before gamma, the ceiling after
 
@@ -179,10 +228,23 @@ fails loudly if it is wrong.
 ## Golden vectors are the contract, not a regression test
 
 `web/test/vectors.json` holds the exact 8-bit output of every built-in effect at
-chosen frames, plus a synthetic case that exercises the arithmetic edges. The
-firmware evaluator will be held to it: base64 bytecode in, identical pixels out.
-Its geometry is pinned in full rather than spread from the defaults, so the
-contract cannot drift when someone adjusts a default.
+chosen frames, plus two synthetic cases: one that exercises the arithmetic edges
+and one that is simply full white. The firmware evaluator is held to it: base64
+bytecode in, identical pixels out. Its geometry is pinned in full rather than
+spread from the defaults, so the contract cannot drift when someone adjusts a
+default.
+
+Every case runs under **two output profiles**. `unclipped` opens the brightness
+ceiling and sets an effectively infinite current budget, so a disagreement can
+only come from the maths. `stage` uses a real ceiling and a supply that cannot
+deliver full white.
+
+The second profile exists because the first one, on its own, passed a firmware
+build with the brightness ceiling applied on the *wrong side of gamma* — the
+ordering decided two sections above, and the one that governs how much current
+the pack actually delivers. With the ceiling pinned at 1, that ordering is a
+no-op and nothing noticed. The generator now refuses to write a vector set in
+which no case trips the current limiter.
 
 Regenerating it is `npm run vectors`, and the diff must be read. A vector that
 changes unintentionally is the firmware and the simulator about to disagree.

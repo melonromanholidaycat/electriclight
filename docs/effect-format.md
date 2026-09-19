@@ -155,7 +155,7 @@ Compilation happens in the browser. The firmware never parses source; it stores
 the source as an opaque blob so the editor can show it again, and executes this:
 
 ```
-magic  "ELFX"        4 bytes
+magic  'E','L','F','X'   4 bytes, in that order
 u8     version       currently 1
 u8     nLocals
 u8     stack         maximum stack depth
@@ -178,8 +178,27 @@ a message naming the index — never by running it anyway or by crashing. The pa
 is served by the device, so the two normally ship together; this matters when an
 effect is carried over from the Pages simulator, which is always newer.
 
-Reserved limits: 64 locals, 256 constants, 32 params, stack depth 32, 4096 bytes
-of code.
+The magic is written and read one byte at a time. Writing it as a u32 is how
+the field spent its first week actually spelling `EFLX` — both sides agreed, so
+nothing broke, but the format did not say what it claimed to.
+
+Reserved limits. A firmware that cannot honour one of these must refuse the
+effect rather than truncate it. These are checked against the firmware's own
+constants by `web/test/run.js`:
+
+| limit | value | firmware constant |
+|---|---|---|
+| Locals | 64 | `EL_MAX_LOCALS` |
+| Constants | 256 | `EL_MAX_CONSTS` |
+| Parameters | 32 | `EL_MAX_PARAMS` |
+| Stack depth | 64 | `EL_MAX_STACK` |
+| Bytes of code | 4096 | `EL_MAX_PROGRAM_BYTES` |
+
+The firmware verifies an uploaded program once, at upload: every operand in
+range, the stack neither overflowing nor underflowing, and `END` reached. That
+is what lets the evaluator run with no bounds checks in its inner loop, and it
+means a malformed effect is refused while the player is still looking at the
+phone rather than halfway through a set.
 
 ## Layers
 

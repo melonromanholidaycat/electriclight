@@ -3,6 +3,7 @@ dist/
 .DS_Store
 scratch-*.png
 firmware/main/www/
+firmware/components/core/generated/
 firmware/build/
 firmware/sdkconfig
 firmware/sdkconfig.old

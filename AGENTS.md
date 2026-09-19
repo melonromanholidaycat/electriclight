@@ -188,8 +188,11 @@ needed for, is [`docs/firmware-plan.md`](docs/firmware-plan.md).
    is plain C in `firmware/components/core` and CI runs it natively, so the
    rules that decide whether a closed guitar stays reachable are tested without
    one.
-4. Bring the effect interpreter to the firmware, matching the simulator exactly.
-   `web/test/vectors.json` is the contract it must reproduce.
+4. ~~Bring the effect interpreter to the firmware, matching the simulator
+   exactly.~~ Done. The evaluator, the wire-format decoder, the neck geometry
+   and the output chain are all in `firmware/components/core`, held to
+   `web/test/vectors.json` in CI and compiled into the firmware so the guitar
+   can run the same check on itself.
 5. Live control: the page detects it's on-device, pushes and stores effects.
 6. First cabled session. Validate power, wiring and LED behaviour with known-good
    third-party firmware before trusting custom code, then flash all boards.

@@ -17,6 +17,7 @@
 #include "app_log.h"
 #include "app_mode.h"
 #include "app_ota.h"
+#include "app_selftest.h"
 #include "app_wifi.h"
 #include "esp_app_desc.h"
 #include "esp_log.h"
@@ -36,7 +37,11 @@ void app_main(void)
              desc ? desc->idf_ver : "?",
              app_ota_running_slot());
 
-    if (app_ota_pending_verify()) {
+    // Captured now because app_ota_confirm_if_healthy() below clears it, and
+    // because "is this image new?" decides whether the self-test is worth
+    // running on this boot.
+    const bool fresh_image = app_ota_pending_verify();
+    if (fresh_image) {
         ESP_LOGW(TAG, "this image is on probation and will roll back unless it "
                       "can reach the network");
     }
@@ -70,6 +75,25 @@ void app_main(void)
     } else {
         ESP_LOGE(TAG, "the radio was meant to be up and is not; leaving this "
                       "boot counted against the rescue threshold");
+    }
+
+    // Only now, and only on a new image. Three reasons for the placement:
+    //
+    //   It takes seconds. The ESP32-S3's FPU is single precision only, and the
+    //   evaluator is full of doubles on purpose, so they are emulated.
+    //   Ordinary boots should not pay for an answer that has not changed.
+    //
+    //   It must not gate the rollback decision. A self-test that crashed on a
+    //   new image would otherwise turn one bad frame into a boot loop, and a
+    //   slow one would delay confirming an image that is working fine.
+    //
+    //   It reports rather than decides. The result lands in the log and in
+    //   /api/status; what to do about a failure is the owner's call, made on a
+    //   phone, not the firmware's, made in the dark.
+    //
+    // /api/selftest re-runs it at any time.
+    if (fresh_image) {
+        app_selftest_run();
     }
 
     ESP_LOGI(TAG, "ready");

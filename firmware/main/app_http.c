@@ -8,6 +8,7 @@
 #include "app_log.h"
 #include "app_mode.h"
 #include "app_ota.h"
+#include "app_selftest.h"
 #include "app_wifi.h"
 #include "cJSON.h"
 #include "esp_app_desc.h"
@@ -59,6 +60,16 @@ static esp_err_t get_status(httpd_req_t *req)
     cJSON_AddBoolToObject(root, "pendingVerify", app_ota_pending_verify());
     cJSON_AddNumberToObject(root, "uptime", (double)(esp_timer_get_time() / 1000000));
     cJSON_AddNumberToObject(root, "heap", (double)esp_get_free_heap_size());
+
+    // Whether this firmware's evaluator still reproduces the golden vectors.
+    // Cached from boot: re-running it costs a second or two, and /api/status
+    // gets polled.
+    const app_selftest_t *st = app_selftest_get();
+    cJSON *self = cJSON_AddObjectToObject(root, "selftest");
+    cJSON_AddBoolToObject(self, "ran", st->ran);
+    cJSON_AddBoolToObject(self, "ok", st->ok);
+    cJSON_AddNumberToObject(self, "ms", st->ms);
+    cJSON_AddStringToObject(self, "summary", st->summary);
 
     char *json = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -217,11 +228,37 @@ static esp_err_t post_radio_policy(httpd_req_t *req)
                                       : "{\"ok\":true,\"alwaysOn\":false}");
 }
 
+// Re-runs the golden vectors now. Seconds, not milliseconds: every frame of
+// every case has to be rendered, because `prev` makes an effect a state machine
+// and a skipped frame is a different answer, and the S3 emulates the doubles.
+//
+// The server serves nothing else while this runs, and once step 5 is driving
+// LEDs it will cost frames too. It is a thing a person asks for once after an
+// update, never something the page should poll.
+static esp_err_t get_selftest(httpd_req_t *req)
+{
+    const app_selftest_t *st = app_selftest_run();
+
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddBoolToObject(root, "ok", st->ok);
+    cJSON_AddNumberToObject(root, "ms", st->ms);
+    cJSON_AddStringToObject(root, "summary", st->summary);
+    char *json = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (!json) return httpd_resp_send_500(req);
+
+    httpd_resp_set_type(req, "application/json");
+    esp_err_t err = httpd_resp_sendstr(req, json);
+    free(json);
+    return err;
+}
+
 static const httpd_uri_t ROUTES[] = {
     { .uri = "/",            .method = HTTP_GET,  .handler = get_index },
     { .uri = "/index.html",  .method = HTTP_GET,  .handler = get_index },
     { .uri = "/api/status",  .method = HTTP_GET,  .handler = get_status },
     { .uri = "/api/log",     .method = HTTP_GET,  .handler = get_log },
+    { .uri = "/api/selftest",.method = HTTP_GET,  .handler = get_selftest },
     { .uri = "/api/ota",     .method = HTTP_POST, .handler = post_ota },
     { .uri = "/api/wifi",    .method = HTTP_POST, .handler = post_wifi },
     { .uri = "/api/radio",   .method = HTTP_POST, .handler = post_radio_policy },

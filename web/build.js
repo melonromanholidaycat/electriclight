@@ -9,6 +9,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { generate as generateVectorHeader } from './gen-vectors-h.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = join(here, 'src');
@@ -91,8 +92,13 @@ const gz = gzipSync(Buffer.from(page, 'utf8'), { level: 9 });
 mkdirSync(embedDir, { recursive: true });
 writeFileSync(join(embedDir, 'index.html.gz'), gz);
 
+// The firmware is held to the same golden vectors as the simulator, so they
+// are generated here rather than in a step somebody can forget to run.
+const vec = generateVectorHeader();
+
 const kb = (page.length / 1024).toFixed(1);
 console.log(`dist/index.html  ${kb} kB  (${(gz.length / 1024).toFixed(1)} kB gzipped, embedded for the firmware)`);
+console.log(`firmware golden vectors  ${vec.cases} cases  (${(vec.bytes / 1024).toFixed(1)} kB of C)`);
 if (page.length > 400 * 1024) {
   console.error('Bundle is too large to embed comfortably in firmware flash.');
   process.exit(1);

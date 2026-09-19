@@ -6,11 +6,14 @@ ESP32-S3 so effects can be designed, edited and deployed over WiFi. See
 
 ## Where this is
 
-**Steps 1 to 3 of 7.** The simulator runs in a browser today. The firmware
+**Steps 1 to 4 of 7.** The simulator runs in a browser today. The firmware
 boots, serves that same page, accepts an update over the air and survives a bad
 one, and carries the survival features — the gesture that brings the radio up,
-safe mode, boot-loop rescue, a log that outlives a crash. All of it builds green
-in CI and none of it has run on hardware yet.
+safe mode, boot-loop rescue, a log that outlives a crash. It now also renders
+effects: the same evaluator as the browser, reproducing every golden frame byte
+for byte, and carrying those vectors so the guitar can re-run the check on
+itself over WiFi. All of it builds green in CI and none of it has run on
+hardware yet.
 
 ```
 web/src/lang/     the effect language: tokeniser, parser, compiler, bytecode evaluator
@@ -19,8 +22,8 @@ web/src/ui/       canvas neck, knob, five-way switch
 web/build.js      inlines it all into one self-contained page
 web/test/         unit tests, golden vectors, browser smoke test
 firmware/         ESP-IDF project: boots, serves the page, takes an OTA update
-firmware/components/core   the decision logic, plain C, tested on the host
-firmware/test_host/        those tests
+firmware/components/core   the decision logic and the effect evaluator, plain C
+firmware/test_host/        those tests, run natively — ./firmware/test_host/run.sh
 docs/             specification, decisions, firmware plan, hardware photographs
 ```
 
@@ -41,9 +44,14 @@ Each fact has exactly one home; the others link to it rather than restating it.
 ## Running it
 
 ```sh
-node web/build.js      # -> dist/index.html, one self-contained file
+node web/build.js      # -> dist/index.html, and the firmware's generated files
 node web/test/run.js   # language, engine and golden-vector tests, no dependencies
+firmware/test_host/run.sh   # the firmware's C, compiled and run on this machine
 ```
+
+`firmware/test_host/run.sh` needs `node web/build.js` to have run first: the
+golden vectors are generated into C there, and both the host tests and the
+firmware compile them.
 
 The smoke test needs Chromium:
 

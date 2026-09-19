@@ -23,8 +23,32 @@ const GEOMETRY = {
   heelWidth: 56,
   stripSpacing: 27,
 };
-const OUTPUT = { ...DEFAULT_OUTPUT, brightnessCeiling: 1, currentBudget: 100000 };
+// Two output profiles, because the output chain has two jobs and the first
+// profile deliberately disables the second one.
+//
+//   unclipped  isolates the evaluator: ceiling wide open, budget effectively
+//              infinite, so a disagreement can only come from the maths.
+//   stage      is the guitar as it is actually played: a real brightness
+//              ceiling and a supply that cannot deliver full white. This is
+//              what pins the order of the chain - knob before gamma because a
+//              dim should be perceptual, ceiling after gamma because it is a
+//              power control - and it is the only thing that exercises the
+//              current limiter at all.
+//
+// The first profile alone passed a build with the ceiling applied on the wrong
+// side of gamma, which is how this second one came to exist.
+const OUTPUTS = {
+  unclipped: { ...DEFAULT_OUTPUT, brightnessCeiling: 1, currentBudget: 100000 },
+  // The budget is deliberately below what the _full case draws (about 835 mA
+  // at this ceiling and knob), because a limiter that never runs is a limiter
+  // nobody has ever tested. The real supply's budget is a setting, not this.
+  stage: { ...DEFAULT_OUTPUT, brightnessCeiling: 0.5, currentBudget: 600 },
+};
 const FRAMES = [0, 1, 2, 5, 17, 59, 60, 121, 300];
+// Shorter, because every frame up to the last one has to be rendered to get
+// there and the guitar runs these at boot. The chain is stateless: what the
+// ceiling and the limiter do to frame 60 they do to frame 300.
+const STAGE_FRAMES = [0, 5, 17, 60];
 
 const hex = (bytes) => Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 
@@ -58,50 +82,78 @@ s    = 1 - rnd * 0.5
 `,
 };
 
+function runCase(def, outputName, frames) {
+  const program = compile(def.source);
+  const params = paramsFor(program);
+  const knob = 0.73;
+  const sw = 2;
+
+  const engine = new Engine(GEOMETRY, OUTPUTS[outputName]);
+  engine.setLayers([{ program, params, mask: null, blend: 'normal' }]);
+  engine.knob = knob;
+  engine.knobTarget = null;
+  engine.sw = sw;
+
+  const expect = [];
+  const want = new Set(frames);
+  const maxFrame = Math.max(...frames);
+  let limited = false;
+  for (let f = 0; f <= maxFrame; f++) {
+    const out = engine.step();
+    limited = limited || engine.limited;
+    if (want.has(f)) expect.push(hex(out));
+  }
+
+  return {
+    id: outputName === 'unclipped' ? def.id : `${def.id}@${outputName}`,
+    output: outputName,
+    source: def.source,
+    program: toBase64(encodeProgram(program)),
+    params: Array.from(params),
+    knob,
+    sw,
+    frames,
+    // Recorded so the check below can insist that the stage profile really is
+    // doing something, rather than quietly matching because nothing clipped.
+    limited,
+    expect,
+  };
+}
+
+// The brightest frame the hardware can be asked for. Not a real effect either:
+// it exists so the current limiter has something to limit, and so the top of
+// the gamma curve is pinned at full scale rather than only in the middle.
+const FULL = {
+  id: '_full',
+  source: `v = 1
+s = 0
+h = 0
+`,
+};
+
 export function buildVectors() {
-  const cases = [];
+  const defs = [...BUILTIN_DEFINITIONS, TORTURE, FULL];
+  const cases = [
+    ...defs.map((d) => runCase(d, 'unclipped', FRAMES)),
+    ...defs.map((d) => runCase(d, 'stage', STAGE_FRAMES)),
+  ];
 
-  for (const def of [...BUILTIN_DEFINITIONS, TORTURE]) {
-    const program = compile(def.source);
-    const params = paramsFor(program);
-    const knob = 0.73;
-    const sw = 2;
-
-    const engine = new Engine(GEOMETRY, OUTPUT);
-    engine.setLayers([{ program, params, mask: null, blend: 'normal' }]);
-    engine.knob = knob;
-    engine.knobTarget = null;
-    engine.sw = sw;
-
-    const expect = [];
-    const want = new Set(FRAMES);
-    const maxFrame = Math.max(...FRAMES);
-    for (let f = 0; f <= maxFrame; f++) {
-      const out = engine.step();
-      if (want.has(f)) expect.push(hex(out));
-    }
-
-    cases.push({
-      id: def.id,
-      source: def.source,
-      program: toBase64(encodeProgram(program)),
-      params: Array.from(params),
-      knob,
-      sw,
-      frames: FRAMES,
-      expect,
-    });
+  if (!cases.some((c) => c.limited)) {
+    throw new Error(
+      'no case trips the current limiter, so nothing checks it. Lower ' +
+      'OUTPUTS.stage.currentBudget or add a brighter effect.');
   }
 
   return {
     formatVersion: FORMAT_VERSION,
     frameRate: FRAME_RATE,
     note: 'Expected output is the 8-bit RGB frame, side 0 first, as lowercase hex. ' +
-          'The firmware evaluator must reproduce these from the base64 program alone.',
+          'The firmware evaluator must reproduce these from the base64 program alone. ' +
+          "Each case names the output profile it was rendered under.",
     geometry: GEOMETRY,
-    output: OUTPUT,
+    outputs: OUTPUTS,
     cases,
   };
 }
 
-export { GEOMETRY, OUTPUT, FRAMES, hex };
+export { GEOMETRY, OUTPUTS, FRAMES, STAGE_FRAMES, hex };

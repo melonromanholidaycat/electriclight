@@ -15,6 +15,7 @@ idf_component_register(
         "app_ota.c"
         "app_inputs.c"
         "app_mode.c"
+        "app_selftest.c"
     INCLUDE_DIRS "."
     EMBED_FILES "www/index.html.gz"
     REQUIRES

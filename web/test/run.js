@@ -6,10 +6,10 @@ import { compile, CompileError } from '../src/lang/compile.js';
 import { createRunner } from '../src/lang/eval.js';
 import { encodeProgram, decodeProgram, toBase64, fromBase64 } from '../src/lang/serialize.js';
 import { VARS, FORMAT_VERSION } from '../src/lang/ops.js';
-import { Engine } from '../src/model/engine.js';
+import { Engine, DEFAULT_OUTPUT } from '../src/model/engine.js';
 import { fretDistance, fretAt, buildPixels, ledPitch, litSpan, DEFAULT_GEOMETRY } from '../src/model/geometry.js';
 import { defaultLibrary, buildLayers, presetsByDefinition, resolveValues, programFor } from '../src/model/library.js';
-import { buildVectors, GEOMETRY, OUTPUT } from './vectors.js';
+import { buildVectors, GEOMETRY, OUTPUTS } from './vectors.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -272,6 +272,102 @@ test('the simulator defaults match the documented measurements', () => {
   }
 });
 
+// The firmware carries its own copy of these numbers, because it cannot import
+// a JavaScript module. Two copies is one too many, so the second one is read
+// back out of the C and compared - the same trick as the documentation check
+// above, pointed at the other twin.
+function firmwareStruct(file, name) {
+  const src = readFileSync(join(here, '..', '..', 'firmware', 'components', 'core', file), 'utf8');
+  const block = src.match(new RegExp(`${name}\\s*=\\s*\\{([\\s\\S]*?)\\n\\};`));
+  assert(block, `${file} no longer defines ${name}`);
+  const out = {};
+  // The alternation is for brace initialisers like `.reversed = { true, true }`,
+  // whose own comma would otherwise end the value early.
+  for (const m of block[1].matchAll(/\.([a-z_0-9]+)\s*=\s*(\{[^}]*\}|[^,{}]+),/g)) {
+    out[m[1]] = m[2].trim();
+  }
+  return out;
+}
+
+const snake = (s) => s.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+const cNumber = (v) => parseFloat(v.replace(/f$/, ''));
+
+// Settings the simulator needs only to draw a picture. The firmware drives LEDs
+// and never draws a neck, so it deliberately does not carry these.
+const DRAWING_ONLY = ['nutWidth', 'heelWidth', 'stripSpacing'];
+
+test('the firmware geometry matches the simulator', () => {
+  const c = firmwareStruct('el_geometry.c', 'EL_DEFAULT_GEOMETRY');
+  for (const [key, value] of Object.entries(DEFAULT_GEOMETRY)) {
+    const name = snake(key);
+    if (DRAWING_ONLY.includes(key)) {
+      assert(!(name in c), `'${key}' is drawing-only, but el_geometry.c carries it`);
+      continue;
+    }
+    assert(name in c, `el_geometry.c has no '${name}' for the simulator's '${key}'`);
+    if (key === 'mapping') {
+      const want = value === 'even' ? 'EL_MAP_EVEN' : 'EL_MAP_FRET_MIDPOINT';
+      assert(c[name] === want, `mapping is '${value}' in geometry.js but ${c[name]} in el_geometry.c`);
+    } else if (key === 'reversed') {
+      assert(c[name] === `{ ${value[0]}, ${value[1]} }`,
+        `reversed is [${value}] in geometry.js but ${c[name]} in el_geometry.c`);
+    } else {
+      near(cNumber(c[name]), value, 1e-6,
+        `'${key}' is ${value} in geometry.js but ${c[name]} in el_geometry.c`);
+    }
+  }
+});
+
+test('the firmware output chain defaults match the simulator', () => {
+  const c = firmwareStruct('el_engine.c', 'EL_DEFAULT_OUTPUT');
+  for (const [key, value] of Object.entries(DEFAULT_OUTPUT)) {
+    // mAPerLed -> ma_per_led: the leading lowercase run is one word.
+    const name = snake(key).replace(/^m_a/, 'ma');
+    assert(name in c, `el_engine.c has no '${name}' for the simulator's '${key}'`);
+    near(cNumber(c[name]), value, 1e-6,
+      `'${key}' is ${value} in engine.js but ${c[name]} in el_engine.c`);
+  }
+});
+
+// docs/effect-format.md publishes the limits an effect may rely on. The firmware
+// is what enforces them, so the two are checked against each other rather than
+// both being written down and hoped about.
+// Any document that quotes the size of the golden vector set has to be right
+// about it. The set grows; prose does not notice.
+test('documented golden-vector counts match the vector set', () => {
+  const stored = JSON.parse(readFileSync(join(here, 'vectors.json'), 'utf8'));
+  const frames = stored.cases.reduce((n, c) => n + c.frames.length, 0);
+  let found = 0;
+  for (const doc of ['README.md', 'AGENTS.md', 'docs/decisions.md', 'docs/effect-format.md']) {
+    const text = readFileSync(join(here, '..', '..', ...doc.split('/')), 'utf8');
+    for (const m of text.matchAll(/(\d+) golden frames/g)) {
+      found++;
+      assert(Number(m[1]) === frames,
+        `${doc} says ${m[1]} golden frames; there are ${frames}`);
+    }
+  }
+  assert(found >= 1, 'no document quotes the golden frame count any more');
+});
+
+test('the documented format limits match the firmware constants', () => {
+  const md = readFileSync(join(here, '..', '..', 'docs', 'effect-format.md'), 'utf8');
+  const headers = readFileSync(join(here, '..', '..', 'firmware', 'components', 'core', 'el_program.h'), 'utf8')
+    + readFileSync(join(here, '..', '..', 'firmware', 'components', 'core', 'el_eval.h'), 'utf8');
+
+  let found = 0;
+  for (const line of md.split('\n')) {
+    const row = line.match(/^\|([^|]*)\|\s*(\d+)\s*\|\s*`(EL_MAX_[A-Z_]+)`\s*\|/);
+    if (!row) continue;
+    found++;
+    const [, label, value, name] = row;
+    const def = headers.match(new RegExp(`#define\\s+${name}\\s+(\\d+)`));
+    assert(def, `effect-format.md documents ${name}, which the firmware does not define`);
+    assert(def[1] === value,
+      `${label.trim()} is ${value} in effect-format.md but ${def[1]} in the firmware (${name})`);
+  }
+  assert(found >= 5, `only found ${found} documented limits in effect-format.md`);
+});
+
 test('the measured geometry lands on a standard tape density', () => {
   // The measurements only come out near a real strip pitch if they are right,
   // so this is a free check on the whole set of them.
@@ -310,7 +406,7 @@ test('a reversed strip keeps its electrical index but moves physically', () => {
 test('the brightness ceiling is out of an effect reach', () => {
   const program = compile('v = 1\ns = 0\n');
   const mk = (ceiling) => {
-    const e = new Engine({ ...GEOMETRY }, { ...OUTPUT, brightnessCeiling: ceiling });
+    const e = new Engine({ ...GEOMETRY }, { ...OUTPUTS.unclipped, brightnessCeiling: ceiling });
     e.setLayers([{ program, params: new Float32Array(0), mask: null, blend: 'normal' }]);
     e.knob = 1;
     e.knobTarget = null;
@@ -323,7 +419,7 @@ test('the brightness ceiling is out of an effect reach', () => {
 
 test('the current limiter holds the budget', () => {
   const program = compile('v = 1\ns = 0\n');
-  const e = new Engine({ ...GEOMETRY }, { ...OUTPUT, brightnessCeiling: 1, currentBudget: 300 });
+  const e = new Engine({ ...GEOMETRY }, { ...OUTPUTS.unclipped, brightnessCeiling: 1, currentBudget: 300 });
   e.setLayers([{ program, params: new Float32Array(0), mask: null, blend: 'normal' }]);
   e.knob = 1;
   e.knobTarget = null;
@@ -334,7 +430,7 @@ test('the current limiter holds the budget', () => {
 
 test('masks keep a layer off the pixels it does not own', () => {
   const program = compile('v = 1\ns = 0\n');
-  const e = new Engine({ ...GEOMETRY }, { ...OUTPUT, brightnessCeiling: 1 });
+  const e = new Engine({ ...GEOMETRY }, { ...OUTPUTS.unclipped, brightnessCeiling: 1 });
   e.setLayers([{
     program, params: new Float32Array(0), blend: 'normal',
     mask: { fromFret: -1, toFret: 999, sides: [true, false] },
@@ -348,7 +444,7 @@ test('masks keep a layer off the pixels it does not own', () => {
 
 test('prev feeds back exactly one frame', () => {
   const program = compile('v = t < 0.005 ? 1 : prev * 0.5\ns = 0\n');
-  const e = new Engine({ ...GEOMETRY }, { ...OUTPUT, brightnessCeiling: 1, gamma: 1 });
+  const e = new Engine({ ...GEOMETRY }, { ...OUTPUTS.unclipped, brightnessCeiling: 1, gamma: 1 });
   e.setLayers([{ program, params: new Float32Array(0), mask: null, blend: 'normal' }]);
   e.knob = 1; e.knobTarget = null;
   near(e.step()[0], 255, 0);
@@ -424,12 +520,18 @@ test('golden vectors still match', () => {
   const stored = JSON.parse(readFileSync(join(here, 'vectors.json'), 'utf8'));
   const fresh = buildVectors();
   assert(stored.formatVersion === fresh.formatVersion, 'format version moved');
+  // The stage profile only earns its place if something actually clips. If a
+  // changed default quietly stops tripping the limiter, this says so rather
+  // than letting the vectors keep passing for the wrong reason.
+  assert(stored.cases.some((c) => c.limited),
+    'no stored case trips the current limiter, so nothing checks it');
   assert(stored.cases.length === fresh.cases.length,
     `case count changed (${stored.cases.length} stored, ${fresh.cases.length} now)`);
   for (let i = 0; i < fresh.cases.length; i++) {
     const a = stored.cases[i];
     const b = fresh.cases[i];
     assert(a.id === b.id, `case ${i} is now "${b.id}", was "${a.id}"`);
+    assert(a.output === b.output, `${b.id}: output profile changed`);
     assert(a.program === b.program, `${b.id}: bytecode changed`);
     for (let f = 0; f < b.expect.length; f++) {
       assert(a.expect[f] === b.expect[f],
@@ -443,7 +545,7 @@ test('golden vectors run from the wire format alone', () => {
   const stored = JSON.parse(readFileSync(join(here, 'vectors.json'), 'utf8'));
   for (const c of stored.cases) {
     const program = decodeProgram(fromBase64(c.program));
-    const engine = new Engine(stored.geometry, stored.output);
+    const engine = new Engine(stored.geometry, stored.outputs[c.output]);
     engine.setLayers([{
       program, params: Float32Array.from(c.params), mask: null, blend: 'normal',
     }]);

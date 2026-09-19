@@ -8,7 +8,7 @@ module is a delay measured in weeks.
 [`firmware/`](../firmware/) that boots, decides on what terms the radio comes
 up, joins a known network or falls back to its own access point, announces
 itself over mDNS, serves the embedded control page, exposes `/api/status`,
-`/api/log`, `/api/ota`, `/api/wifi` and `/api/radio`, and takes a firmware image
+`/api/log`, `/api/ota`, `/api/wifi`, `/api/radio` and `/api/selftest`, and takes a firmware image
 over the air with automatic rollback if the new one cannot be reached.
 
 The survival features are in: the sweep gesture, safe mode on the same gesture
