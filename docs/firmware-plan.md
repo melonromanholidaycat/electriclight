@@ -370,7 +370,7 @@ DIP-14 pinout, as standard for a 74x125: pin 1 `1OE`, 2 `1A`, 3 `1Y`, 4 `2OE`,
   5 V is the entire point.
 - `OE` is **active low**. Tie pins 1 and 4 to GND so the two used channels stay
   enabled.
-- Feed GPIO15 into pin 2 and GPIO16 into pin 5; take strip data from pins 3
+- Feed GPIO12 into pin 2 and GPIO13 into pin 5; take strip data from pins 3
   and 6.
 - **Do not leave the unused inputs floating.** Tie pins 9 and 12 to GND, and
   pins 10 and 13 to VCC so those outputs stay disabled. A floating CMOS input
