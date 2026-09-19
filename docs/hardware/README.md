@@ -13,6 +13,11 @@ figure here and the build fails until the code agrees.
 |---|---|
 | `guitar-front.jpg` | the whole instrument, both strips running the length of the neck |
 | `fretboard-strips.jpg` | close-up: tape, LED packages, solder pads, position across the board |
+| `cavity-overview.jpg` | the pickguard lifted: Nano, loom, both control groups |
+| `nano-and-loom.jpg` | the Arduino Nano and everything wired to it |
+| `controls-rotary-switch.jpg` | the dedicated rotary switch for the LEDs |
+| `controls-rotary-switch-detail.jpg` | the same from the side |
+| `neck-pocket-wiring.jpg` | where the strips enter the body: three conductors per strip |
 
 What the close-up settles:
 
@@ -58,17 +63,47 @@ that is the measurement being wrong, not the tape.
 
 Both were confirmed: the neck has 21 frets, counted.
 
+## The controls, as found
+
+Confirmed by opening the guitar. **All 52 LEDs were verified working on the
+original Nano before anything was disconnected**, so any dead pixel found later
+is something the rebuild did.
+
+**The five-way is a dedicated rotary switch, not the guitar's pickup selector.**
+It is wired with five separate conductors back to the controller — one per
+position — rather than as a resistor ladder. So it costs five digital pins, not
+one analog pin. The pin budget still closes; see
+[`../firmware-plan.md`](../firmware-plan.md).
+
+**The potentiometer is an A500K push-pull, and its switch section is the system
+power switch.** Two consequences, both in the firmware plan: 500 kΩ is a far
+higher source impedance than the ESP32's ADC likes, and the `A` means a
+logarithmic taper, which interacts with the gamma already in the output chain.
+The push-pull is worth keeping — it is the only power switch the instrument has.
+
+**No separate voltage regulator could be found.** Two conductors run from the
+battery cavity to the push-pull switch, and there is no regulator chip or module
+visible on the loom. The likeliest explanation is that the strips are fed from
+the Arduino Nano's own on-board linear regulator, which would explain the
+brief's long-standing suspicion that the present setup caps achievable
+brightness — a Nano's regulator can supply a few hundred milliamps at most, and
+drops the whole difference from the pack as heat.
+
 ## Still to check
 
 Open until the guitar is opened. Nothing should be designed around an assumption
 where one of these is missing.
 
-- The exact strip part, if the reel or tape carries a marking.
-- What currently regulates the battery voltage down.
-- Wiring, connectors, and the gauge of the run up the neck.
-- Whether the pot and five-way are wired to the existing controls or to
-  dedicated ones, and what the five-way's resistor ladder looks like.
-- Confirmation that the board's own pinout matches the published one for the
-  ESP32-S3 Super Mini. Flash and pins are both settled on paper — see
-  [`../firmware-plan.md`](../firmware-plan.md) — but these generic boards vary
-  between sellers and revisions.
+- **The voltage on a strip's 5 V conductor with the system powered on.** One
+  measurement, and it settles whether anything regulates the pack down at all.
+  Around 5 V means a regulator exists somewhere; around 9 V means the strips
+  have been running well over their rated supply.
+- **What the blue-taped component beside the Nano is** (`nano-and-loom.jpg`,
+  top of frame). It is the only thing on the loom that could be a regulator.
+- The gauge of the conductors running up the neck. They were sized for whatever
+  the old setup could drive, which was probably a fraction of what the rebuild
+  will.
+- The exact strip part, if the reel or tape carries a marking. Taken as
+  WS2812B-equivalent for now: 5 V, three-wire, individually addressable.
+- Confirmation that the new board's own pinout matches the published one for the
+  ESP32-S3 Super Mini. These generic boards vary between sellers and revisions.

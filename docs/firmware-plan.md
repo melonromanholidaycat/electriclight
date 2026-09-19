@@ -86,7 +86,7 @@ Both strips are separate runs, so:
 |---|---|---|
 | LED data | 2 | one per strip, not daisy-chained |
 | potentiometer | 1 | analog |
-| five-way switch | 1 | analog, if it is a resistor ladder — otherwise up to 5 digital |
+| five-way switch | 5 | **digital.** It is a rotary switch with one conductor per position, not a resistor ladder |
 | battery sense | 1 | analog, via a divider |
 | microphone (reserved) | 3 | I²S needs BCLK, WS and DATA. Not 2 — PDM needs two but locks you into worse parts |
 
@@ -94,21 +94,28 @@ Both strips are separate runs, so:
 
 An ESP32-S3 Super Mini (`ESP32-S3FH4R2`, 22.5 × 18 mm) breaks out thirteen GPIO
 with no boot or system involvement: **1, 2, 4, 5, 6, 7, 8, 15, 16, 17, 18, 21,
-38**. Seven of those (1–8) are ADC1, which is where the three analog inputs have
-to live. Eight pins needed, thirteen available, and the ADC1 requirement is met
-twice over.
+38**. Seven of those (1–8) are ADC1, which is where the two analog inputs have
+to live.
 
-A proposed map, provisional until the five-way's wiring is known:
+The five-way turning out to be five conductors rather than a ladder cost four
+pins that were not budgeted. Twelve needed, thirteen available — it still
+closes, with one spare:
 
 | pin | use | why |
 |---|---|---|
-| GPIO15 | LED data, bass strip | safe, digital |
-| GPIO16 | LED data, treble strip | safe, digital |
+| GPIO15 | LED data, bass strip | digital |
+| GPIO16 | LED data, treble strip | digital |
 | GPIO1 | potentiometer | ADC1_CH0 |
-| GPIO2 | five-way | ADC1_CH1 |
-| GPIO4 | battery sense | ADC1_CH3 |
+| GPIO2 | battery sense | ADC1_CH1 |
+| GPIO4–8 | five-way, one pin per position | digital in, internal pull-ups, switch common to GND |
 | GPIO17, 18, 21 | reserved for the microphone | I²S BCLK / WS / DATA |
-| GPIO5, 6, 7, 8, 38 | spare | three still on ADC1 |
+| GPIO38 | spare | |
+
+Reading the switch as five inputs needs no new components and cannot be
+misread — exactly one input is low at a time, and none-low or several-low is a
+detectable fault rather than a plausible-looking wrong answer. **If the pin
+budget ever gets tight, four resistors at the switch turn it into a ladder on
+one ADC pin**, freeing four. Not worth doing while a spare pin exists.
 
 **GPIO48 carries an on-board WS2812.** That is worth more than it looks: the
 effect evaluator and the LED driver can both be brought up and checked against
@@ -155,6 +162,46 @@ before the guitar is closed:
   supply browns out. The decoupling already planned matters more here.
 
 The S3's RMT peripheral has four TX channels, so two LED strips are comfortable.
+
+## The potentiometer is 500 kΩ, and that needs handling
+
+It is an **A500K push-pull**, and its switch section is the instrument's power
+switch, so replacing it is not free: a 10 kΩ linear push-pull is an unusual part
+and the push-pull function is worth more than the convenience.
+
+**500 kΩ is far above what the ESP32's ADC wants**, which is nearer 10 kΩ. The
+converter charges a small sampling capacitor from the source, and through half a
+megohm it cannot do that quickly enough — readings come out noisy and slow to
+settle, and it looks exactly like a firmware bug. It worked acceptably on the
+Nano because the ATmega's input is more forgiving; do not read that as evidence
+it will work here.
+
+The fix is one component: **100 nF from the ADC pin to GND**, plus multisampling
+in firmware. The capacitor becomes the charge reservoir the converter samples
+from, and the pot only has to keep it topped up. Worst case is mid-rotation at
+roughly 125 kΩ, giving a time constant near 13 ms — imperceptible on a knob, and
+far better than the alternative.
+
+**The `A` means a logarithmic taper**, which is right for a brightness control —
+perception is roughly logarithmic too. But the output chain already applies
+gamma, so a log pot feeding a gamma curve compensates twice and will feel dead
+across most of its travel. The knob response therefore needs to be a **remotely
+adjustable curve** rather than a compiled-in assumption, like everything else
+tied to physical wiring.
+
+## The power switch must not carry the load
+
+The push-pull switch currently sits in the battery line and carries the whole
+LED current. That was survivable when the strips were fed from a Nano's
+regulator and drew a few hundred milliamps. It is not survivable at the 2.5 A
+the rebuild can pull from the pack: the switch on a guitar pot is a small-signal
+part, and welding its contacts closed would be a failure with no obvious cause
+and no way back except opening the guitar.
+
+**Use it as a signal, not as a conductor.** Almost every buck converter module
+has an enable pin; run the push-pull to that instead, and the switch carries
+milliamps while the converter carries the amps. The control behaves identically
+and the part is no longer operating outside its rating.
 
 ## Level shifting
 
