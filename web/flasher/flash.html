@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flash electriclight</title>
+<meta name="theme-color" content="#08090c">
+<style>
+:root {
+  --bg: #08090c; --panel: #121318; --panel2: #181a21; --line: #262932;
+  --text: #e8e9ee; --dim: #8f94a3; --accent: #5ac8fa; --warn: #ffb340; --err: #ff6b6b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+main { max-width: 680px; margin: 0 auto; padding: 24px 16px 64px; }
+h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: 0.01em; }
+h2 { font-size: 15px; margin: 28px 0 8px; }
+p { margin: 0 0 12px; }
+.sub { color: var(--dim); margin-bottom: 24px; }
+.card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 12px; padding: 16px; margin: 16px 0;
+}
+.card.primary { border-color: #2c4d60; background: var(--panel2); }
+.muted { color: var(--dim); }
+.small { font-size: 13px; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+ol { padding-left: 20px; margin: 0 0 12px; }
+li { margin-bottom: 6px; }
+a { color: var(--accent); }
+.row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.badge {
+  font-size: 11px; padding: 2px 8px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--dim);
+}
+.badge.on { color: #0b0c10; background: var(--accent); border-color: var(--accent); }
+esp-web-install-button { --esp-tools-button-color: #0b0c10; }
+esp-web-install-button[install-unsupported] { display: none; }
+button, .btn {
+  font: inherit; font-weight: 600;
+  background: var(--accent); color: #0b0c10; border: 0;
+  border-radius: 9px; padding: 11px 18px; cursor: pointer;
+}
+#unsupported { display: none; }
+.warn { color: var(--warn); }
+details { margin-top: 12px; }
+summary { cursor: pointer; color: var(--dim); font-size: 13px; }
+details .card { margin-top: 12px; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Flash electriclight</h1>
+  <p class="sub">Installs the firmware onto an ESP32-S3 over USB. Nothing to download
+  and nothing to install on this computer — it all happens in this page.</p>
+
+  <!-- Filled in by the build so the page can never claim to be offering a
+       different commit than the binaries beside it. -->
+  <p class="row small muted">
+    <span class="badge" id="build-badge">build</span>
+    <span class="mono" id="build-id">unknown</span>
+  </p>
+
+  <div id="unsupported" class="card">
+    <p class="warn"><strong>This browser cannot flash.</strong></p>
+    <p class="small">Flashing needs the Web Serial API, which today means
+    <strong>Chrome, Edge or Opera on Windows, macOS or Linux</strong>. Safari and
+    Firefox do not have it, and no browser on iOS or iPadOS does — iOS does not
+    give apps access to a USB serial port at all.</p>
+    <p class="small muted">Open this page in Chrome on a desktop or laptop.</p>
+  </div>
+
+  <div id="supported" hidden>
+    <div class="card primary">
+      <h2 style="margin-top:0">ESP32-S3, 4&nbsp;MB</h2>
+      <p class="small muted">The boards in hand: <span class="mono">ESP32-S3FH4R2</span>,
+      the three-pack Super Minis. Use this one.</p>
+      <esp-web-install-button manifest="firmware/4mb/manifest.json">
+        <button slot="activate">Install on a 4 MB board</button>
+      </esp-web-install-button>
+    </div>
+
+    <details>
+      <summary>Different board? (16 MB modules)</summary>
+      <div class="card">
+        <p class="small">Only for a module with 16 MB of flash. Installing this on a
+        4 MB board will not damage it, but it will not boot — reflash with the
+        4 MB build above to recover.</p>
+        <esp-web-install-button manifest="firmware/16mb/manifest.json">
+          <button slot="activate">Install on a 16 MB board</button>
+        </esp-web-install-button>
+      </div>
+    </details>
+  </div>
+
+  <h2>What to do</h2>
+  <ol>
+    <li>Plug the board into this computer with a USB-C cable that <strong>carries
+      data</strong>. A charge-only cable will power the board and never appear as
+      a port, which looks exactly like a broken board.</li>
+    <li>Click <strong>Install</strong> and pick the port. It is usually the only
+      one in the list.</li>
+    <li>Choose <strong>Erase device</strong> on a board that has never run this
+      firmware. It clears whatever the factory left behind.</li>
+    <li>Wait. About a minute.</li>
+    <li><strong>Do all three boards</strong> while the computer is here. Spares are
+      only spares if they are ready to swap in.</li>
+  </ol>
+
+  <h2>Before you hand the computer back</h2>
+  <p>Check the board actually came up, using your phone — while a second flash is
+  still cheap.</p>
+  <ol>
+    <li>On the phone, join the WiFi network <span class="mono">electriclight</span>,
+      password <span class="mono">electric-light</span>.</li>
+    <li>Open <a href="http://192.168.4.1/">192.168.4.1</a>. The control page
+      should load, with a <span class="badge on">device</span> badge instead of
+      <span class="badge">simulator</span>.</li>
+    <li>The onboard LED gives it away too, before you even reach for the phone.</li>
+  </ol>
+  <p class="small muted">The password is in the repository on purpose. It is a
+  deterrent, not a secret: being locked out of a closed guitar is much worse than
+  a stranger in radio range changing the lights.</p>
+
+  <h2>If the board is not offered as a port</h2>
+  <p class="small">A board whose firmware is broken can still be flashed, but it may
+  need to be put into download mode by hand: <strong>hold BOOT, tap RESET, release
+  BOOT</strong>, then click Install again. That path works no matter what is on the
+  board, which is why a bad image is never permanent.</p>
+
+  <hr>
+  <p class="small muted">Source, and the reasoning behind all of it:
+  <a href="https://github.com/melonromanholidaycat/electriclight">github.com/melonromanholidaycat/electriclight</a>.
+  The simulator is <a href="./">here</a>.</p>
+</main>
+
+<script type="module">
+  // esp-web-tools is loaded from a CDN rather than bundled. This is the one page
+  // in the project that is allowed an external request: it is never embedded in
+  // firmware, it is useless without a network anyway, and vendoring esptool-js
+  // would mean carrying a large dependency we cannot meaningfully review.
+  // Pinned, not floating - a flasher that silently changes version between the
+  // day it was tested and the day a borrowed laptop is sitting open is not a
+  // tool, it is a liability.
+  const CDN = 'https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js';
+
+  const supported = 'serial' in navigator;
+  document.getElementById('unsupported').style.display = supported ? 'none' : 'block';
+  document.getElementById('supported').hidden = !supported;
+
+  if (supported) {
+    import(CDN).catch(() => {
+      // Better to say so than to leave a button that does nothing when clicked.
+      document.getElementById('supported').hidden = true;
+      const u = document.getElementById('unsupported');
+      u.style.display = 'block';
+      u.innerHTML = '<p class="warn"><strong>Could not load the flashing tool.</strong></p>' +
+        '<p class="small">This page needs internet access the first time it is used. ' +
+        'Check the connection and reload.</p>';
+    });
+  }
+
+  // The build stamp travels in the manifest, so the page reports the same
+  // version the binaries beside it were built from rather than a separate
+  // string somebody has to remember to update.
+  fetch('firmware/4mb/manifest.json', { cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((m) => {
+      if (!m) throw new Error('no manifest');
+      document.getElementById('build-id').textContent = m.version;
+      document.getElementById('build-badge').textContent = m.name;
+    })
+    .catch(() => {
+      document.getElementById('build-id').textContent = 'no firmware published with this page';
+    });
+</script>
+</body>
+</html>

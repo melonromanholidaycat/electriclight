@@ -102,8 +102,14 @@ jobs:
           if-no-files-found: error
 
   deploy:
-    name: Publish simulator to Pages
-    needs: [test, smoke]
+    name: Publish simulator and flasher to Pages
+    # Gated on the firmware build, which the simulator alone never was. The page
+    # now ships the firmware binaries beside it, and a deploy that refreshed the
+    # page while leaving yesterday's binaries in place is exactly the kind of
+    # silent mismatch this project is built to avoid. The cost is that a broken
+    # firmware build also holds back a simulator change; the previously deployed
+    # simulator stays up either way.
+    needs: [test, smoke, firmware]
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
@@ -120,6 +126,26 @@ jobs:
         with:
           node-version: 20
       - run: node web/build.js
+      # The flasher serves these over HTTPS, which is what Web Serial requires,
+      # so a borrowed computer needs nothing but a browser tab.
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: firmware-esp32s3-*
+          path: fw
+      - name: Place the firmware beside the flasher
+        run: |
+          set -eu
+          for v in 4mb 16mb; do
+            src="fw/firmware-esp32s3-$v"
+            dst="dist/firmware/$v"
+            mkdir -p "$dst"
+            cp "$src/electriclight.bin" "$dst/"
+            cp "$src/ota_data_initial.bin" "$dst/"
+            cp "$src/bootloader/bootloader.bin" "$dst/"
+            cp "$src/partition_table/partition-table.bin" "$dst/"
+          done
+      - name: Refuse to publish a flasher that cannot flash
+        run: node -e "import('./web/gen-flasher.js').then((m) => m.verifyPublished('dist'))"
       # enablement turns Pages on via the API on the first run, so nobody has to
       # find the setting in repository settings on a phone.
       - uses: actions/configure-pages@v5

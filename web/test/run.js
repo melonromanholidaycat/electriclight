@@ -10,6 +10,7 @@ import { Engine, DEFAULT_OUTPUT } from '../src/model/engine.js';
 import { fretDistance, fretAt, buildPixels, ledPitch, litSpan, DEFAULT_GEOMETRY } from '../src/model/geometry.js';
 import { defaultLibrary, buildLayers, presetsByDefinition, resolveValues, programFor } from '../src/model/library.js';
 import { buildVectors, GEOMETRY, OUTPUTS } from './vectors.js';
+import { manifestFor, VARIANTS, PARTITION_TABLE_OFFSET } from '../gen-flasher.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -334,6 +335,90 @@ test('the firmware output chain defaults match the simulator', () => {
 // both being written down and hoped about.
 // Any document that quotes the size of the golden vector set has to be right
 // about it. The set grows; prose does not notice.
+// --- the web flasher ----------------------------------------------------------
+//
+// It gets one shot on a borrowed computer, so the things that would waste that
+// shot are checked here rather than discovered there.
+
+// The manifest derives the otadata and app offsets from the same CSV the
+// firmware is built from, so those two cannot drift and are not worth asserting.
+// What is worth asserting is everything the CSV does not say: which slot the app
+// belongs in, and the two addresses that come from the chip rather than the
+// layout.
+test('the flasher writes the app to the first OTA slot', () => {
+  for (const variant of VARIANTS) {
+    const csv = readFileSync(join(here, '..', '..', 'firmware', 'partitions', `${variant}.csv`), 'utf8');
+    const apps = csv.split('\n')
+      .filter((l) => !l.trim().startsWith('#') && l.includes(','))
+      .map((l) => l.split(',').map((c) => c.trim()))
+      .filter((c) => c[1] === 'app')
+      .map((c) => ({ name: c[0], offset: parseInt(c[3], 16) }))
+      .sort((a, b) => a.offset - b.offset);
+    assert(apps.length >= 2, `${variant}.csv has ${apps.length} app partitions; OTA needs two`);
+
+    const parts = Object.fromEntries(
+      manifestFor(variant).builds[0].parts.map((p) => [p.path, p.offset]));
+    // A cable flash must land in the slot a factory-fresh otadata points at,
+    // which is the lowest-addressed one. Writing the app to the other slot
+    // produces a board that flashes cleanly and boots nothing.
+    assert(parts['electriclight.bin'] === apps[0].offset,
+      `${variant}: the app is written to 0x${parts['electriclight.bin'].toString(16)}, ` +
+      `but the first OTA slot (${apps[0].name}) is at 0x${apps[0].offset.toString(16)}`);
+  }
+});
+
+test('the flasher targets the chip the firmware is built for', () => {
+  const sdkconfig = readFileSync(join(here, '..', '..', 'firmware', 'sdkconfig.defaults'), 'utf8');
+  const target = sdkconfig.match(/^CONFIG_IDF_TARGET="([^"]+)"/m);
+  assert(target, 'sdkconfig.defaults no longer names a target');
+
+  // Neither of these comes from the partition table. The bootloader address is a
+  // property of the chip: the S3 boots from 0, the original ESP32 from 0x1000.
+  // Flashing an S3 image to 0x1000 leaves a board that never starts, and the
+  // symptom looks identical to a dead board.
+  const BOOTLOADER_AT = { esp32s3: 0, esp32c3: 0, esp32s2: 0x1000, esp32: 0x1000 };
+  const FAMILY = { esp32s3: 'ESP32-S3', esp32c3: 'ESP32-C3', esp32s2: 'ESP32-S2', esp32: 'ESP32' };
+  const want = BOOTLOADER_AT[target[1]];
+  assert(want !== undefined, `no bootloader offset known for target ${target[1]}`);
+
+  for (const variant of VARIANTS) {
+    const build = manifestFor(variant).builds[0];
+    assert(build.chipFamily === FAMILY[target[1]],
+      `${variant}: the flasher offers ${build.chipFamily} but the firmware targets ${target[1]}`);
+    const boot = build.parts.find((p) => p.path === 'bootloader.bin');
+    assert(boot.offset === want,
+      `${variant}: bootloader at 0x${boot.offset.toString(16)}, but ${target[1]} boots from 0x${want.toString(16)}`);
+  }
+});
+
+test('the partition table offset is not overridden in sdkconfig', () => {
+  // The flasher writes the partition table to a hard offset. If a build ever
+  // moves it, the flasher would quietly write it to the old address.
+  const defaults = readFileSync(join(here, '..', '..', 'firmware', 'sdkconfig.defaults'), 'utf8')
+    + readFileSync(join(here, '..', '..', 'firmware', 'sdkconfig.16mb'), 'utf8');
+  const override = defaults.match(/^CONFIG_PARTITION_TABLE_OFFSET=(\S+)/m);
+  assert(!override || parseInt(override[1], 16) === PARTITION_TABLE_OFFSET,
+    `sdkconfig sets the partition table offset to ${override && override[1]}, ` +
+    `but the flasher writes it to 0x${PARTITION_TABLE_OFFSET.toString(16)}`);
+});
+
+test('the flasher pins its dependency to an exact version', () => {
+  const page = readFileSync(join(here, '..', 'flasher', 'flash.html'), 'utf8');
+  const url = page.match(/https:\/\/unpkg\.com\/esp-web-tools@([^/]+)\//);
+  assert(url, 'the flasher no longer loads esp-web-tools from a pinned URL');
+  assert(/^\d+\.\d+\.\d+$/.test(url[1]),
+    `esp-web-tools is pinned to "${url[1]}", which is not an exact version. ` +
+    'A flasher that changes under you between testing and a borrowed laptop is not a tool.');
+});
+
+test('the flasher tells the truth about which browsers work', () => {
+  // The owner has only an iPhone. A page that let him believe he could flash
+  // from it would cost him a wasted evening rather than a wasted click.
+  const page = readFileSync(join(here, '..', 'flasher', 'flash.html'), 'utf8');
+  assert(/'serial' in navigator/.test(page), 'the flasher no longer checks for Web Serial');
+  assert(/iOS/.test(page), 'the flasher no longer says that iOS cannot flash');
+});
+
 test('documented golden-vector counts match the vector set', () => {
   const stored = JSON.parse(readFileSync(join(here, 'vectors.json'), 'utf8'));
   const frames = stored.cases.reduce((n, c) => n + c.frames.length, 0);

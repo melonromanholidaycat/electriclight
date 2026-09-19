@@ -20,6 +20,7 @@ web/src/lang/     the effect language: tokeniser, parser, compiler, bytecode eva
 web/src/model/    neck geometry, render engine, effect library
 web/src/ui/       canvas neck, knob, five-way switch
 web/build.js      inlines it all into one self-contained page
+web/flasher/      the web flasher: installs firmware over USB from a browser tab
 web/test/         unit tests, golden vectors, browser smoke test
 firmware/         ESP-IDF project: boots, serves the page, takes an OTA update
 firmware/components/core   the decision logic and the effect evaluator, plain C
@@ -73,6 +74,17 @@ CI says so rather than the cabled session.
 
 CI runs all three on every push. On the default branch it also publishes
 `dist/index.html` to GitHub Pages, enabling Pages itself on the first run.
+
+## Flashing
+
+`flash.html` is published to Pages beside the simulator. It installs the firmware
+onto a board over USB from Chrome, Edge or Opera on a desktop — no toolchain, no
+driver, nothing installed on the machine. Safari, Firefox and every browser on
+iOS lack Web Serial and cannot flash; the page says so rather than offering a
+button that fails.
+
+That is the only step in the whole project that needs a computer. Everything
+after it happens over WiFi.
 
 ## The two contexts
 

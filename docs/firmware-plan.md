@@ -44,7 +44,9 @@ effectively permanent.** Most of this document is that rule applied.
 
 Short list, and it is worth keeping short:
 
-1. **The first flash.** Obviously.
+1. **The first flash.** Obviously — but it costs a browser tab, not a toolchain.
+   See [`decisions.md`](decisions.md) for the web flasher and why it was built
+   before the step it delayed.
 2. **The partition table.** Its *contents* update over the air; its *layout*
    does not. Getting this wrong is the most expensive mistake available.
 3. **Anything physically miswired.**
@@ -553,21 +555,50 @@ does not help the phone, but it turns "borrow a laptop *and* disassemble the
 guitar" into "borrow a laptop". Given how much of this project's design bends
 around scarce cable access, it is the best few euros available.
 
-## Cabled session checklist
+## The two sessions
+
+These were written as one session for a long time, and they are not. Separating
+them is what makes the schedule survive an owner with no computer.
+
+### Session A — flash the boards
+
+**Needs:** a computer with Chrome, a USB-C cable that carries data, a desk.
+**Does not need:** the guitar, the strips, the parts, a soldering iron, or any
+software installed on that computer.
+
+1. Open the published `flash.html`, click Install, pick the port.
+2. Choose **Erase device** on a board that has never run this firmware.
+3. **Do all three boards.** A spare is only a spare if it is ready to swap in.
+4. Before the computer goes back: join the `electriclight` AP from the phone and
+   confirm the control page loads. A failed flash is cheap to redo while the
+   machine is still in the room and expensive afterwards.
+
+Twenty minutes, and it can happen opportunistically the next time any laptop is
+nearby. Everything the firmware does after this — effects, settings, geometry,
+WiFi credentials, the web UI itself — arrives over the air.
+
+### Session B — assemble and validate the guitar
+
+**Needs:** the parts, a soldering iron, a multimeter, and the guitar open.
+**Does not need a computer at all**, provided Session A already happened: a
+flashed board is reachable from the phone over its own access point.
 
 In order, and the order matters:
 
 1. **Validate the hardware with known-good third-party firmware first** — WLED
    or similar. Power, wiring, strip type, LED count and direction all get
    confirmed before any custom code is in the picture. Debugging your own
-   firmware against unverified wiring is the slowest possible loop.
+   firmware against unverified wiring is the slowest possible loop. This is the
+   one step that puts a cable back in the picture; do it on a board that is not
+   one of the three, or reflash afterwards from the same web page.
 2. Check supply voltage **under load**, not at idle, at the far end of the neck.
 3. Confirm both strips independently, and confirm the data direction — index 0
    is expected at the *last fret*, not the nut.
-4. Flash the real firmware and **verify OTA works on the bench, before closing
-   the guitar**. An OTA path that has never been exercised is not a path.
+4. **Verify OTA works on the bench, before closing the guitar.** An OTA path
+   that has never been exercised is not a path.
 5. Verify safe mode entry by its physical gesture, also before closing.
-6. Flash all three boards, so a brick is a swap rather than another session.
+6. Run `/api/selftest` from the phone once, so the evaluator is known to agree
+   with the simulator on this silicon before the instrument is trusted on stage.
 
 ## Host-testable core
 

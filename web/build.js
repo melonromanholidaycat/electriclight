@@ -10,6 +10,7 @@ import { gzipSync } from 'node:zlib';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { generate as generateVectorHeader } from './gen-vectors-h.js';
+import { generate as generateFlasher } from './gen-flasher.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const src = join(here, 'src');
@@ -96,9 +97,15 @@ writeFileSync(join(embedDir, 'index.html.gz'), gz);
 // are generated here rather than in a step somebody can forget to run.
 const vec = generateVectorHeader();
 
+// The flasher page and its manifests. The firmware binaries themselves are
+// copied in by CI from the build job, so a local run writes the page and the
+// manifests and leaves the .bin files to whoever has an ESP-IDF toolchain.
+const flash = generateFlasher(outDir);
+
 const kb = (page.length / 1024).toFixed(1);
 console.log(`dist/index.html  ${kb} kB  (${(gz.length / 1024).toFixed(1)} kB gzipped, embedded for the firmware)`);
 console.log(`firmware golden vectors  ${vec.cases} cases  (${(vec.bytes / 1024).toFixed(1)} kB of C)`);
+console.log(`dist/flash.html  web flasher, ${flash.variants} layouts, build ${flash.version}`);
 if (page.length > 400 * 1024) {
   console.error('Bundle is too large to embed comfortably in firmware flash.');
   process.exit(1);

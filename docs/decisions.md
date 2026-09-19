@@ -222,6 +222,43 @@ earlier parameterisations were replaced for exactly this reason. The Setup page
 derives the implied LED density and says so, so a mismeasurement announces
 itself rather than quietly skewing every effect.
 
+## The firmware is flashed from a web page, not a toolchain
+
+`flash.html`, published to Pages beside the simulator, installs the firmware over
+USB using Web Serial. A borrowed computer needs a browser tab and nothing else:
+no Python, no ESP-IDF, no driver, nothing left behind on somebody else's machine.
+
+**Why it was worth building before the live-control step it delayed:** the owner
+has a phone and no computer, so every cabled session is borrowed time. That made
+"when can we flash?" the constraint the whole schedule was bending around. It
+is not, once flashing costs a browser tab — a board can be flashed the next time
+any laptop is in the room, and the firmware it receives is already OTA-capable
+with boot-loop rescue and safe mode. Everything after that arrives over WiFi.
+
+It also separates two sessions that had been conflated: flashing three bare
+boards on a desk needs a computer and no parts; assembling the guitar needs
+parts and no computer.
+
+**This is the one page allowed an external request.** `esp-web-tools` loads from
+a CDN, pinned to an exact version. The simulator's no-external-requests rule
+exists because that page is embedded in firmware and has to work with no
+network; the flasher is embedded in nothing and is useless without a network, so
+the rule does not apply to it. Vendoring esptool-js instead would mean carrying
+a large dependency nobody here can meaningfully review. The version is pinned,
+not floating, because a tool that changes between the day it was tested and the
+day a borrowed laptop is open is not a tool.
+
+**Publishing to Pages is now gated on the firmware build**, which the simulator
+alone never was. The page ships the binaries beside it, and a deploy that
+refreshed the page while leaving yesterday's binaries in place is exactly the
+silent mismatch this project is built against. The cost is that a broken
+firmware build also holds back a simulator change; the already-deployed
+simulator stays up regardless.
+
+**What would reopen it:** nothing likely. If Web Serial were withdrawn, the
+fallback is the same binaries and `esptool`, which is why CI still publishes
+them as a plain artefact.
+
 ## The page is one self-contained file
 
 Sources are ES modules so node can unit-test them; `web/build.js` inlines them

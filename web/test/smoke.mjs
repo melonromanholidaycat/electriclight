@@ -10,16 +10,24 @@ const PORT = 8099;
 const problems = [];
 const check = (cond, msg) => { if (!cond) problems.push(msg); };
 
+const TYPES = { '.html': 'text/html', '.json': 'application/json', '.bin': 'application/octet-stream' };
+
 const server = createServer((req, res) => {
   const url = (req.url || '').split('?')[0];
-  if (url === '/' || url === '/index.html') {
-    res.writeHead(200, { 'content-type': 'text/html' });
-    res.end(readFileSync('dist/index.html'));
-  } else {
-    // Pages behaves like this too: no device here, so api/status must 404.
-    res.writeHead(404);
-    res.end('not found');
+  const path = url === '/' ? '/index.html' : url;
+  // Serve dist/ the way Pages does, so the flasher can reach its manifests.
+  // Anything absent 404s - including api/status, since there is no device here.
+  if (/^\/[\w./-]+$/.test(path) && !path.includes('..')) {
+    try {
+      const body = readFileSync(`dist${path}`);
+      const ext = path.slice(path.lastIndexOf('.'));
+      res.writeHead(200, { 'content-type': TYPES[ext] || 'application/octet-stream' });
+      res.end(body);
+      return;
+    } catch { /* fall through to 404 */ }
   }
+  res.writeHead(404);
+  res.end('not found');
 });
 await new Promise((r) => server.listen(PORT, r));
 
@@ -132,6 +140,74 @@ await page.click('.tab[data-tab=play]');
 await page.waitForTimeout(400);
 if (process.env.SMOKE_SHOT) await page.screenshot({ path: process.env.SMOKE_SHOT });
 
+// --- the flasher --------------------------------------------------------------
+//
+// This page gets one chance on a borrowed computer. Everything that would waste
+// that chance - a manifest that does not load, a pinned CDN URL that 404s, a
+// script error leaving a dead button - is cheap to catch here and expensive to
+// catch there.
+
+const cdn = readFileSync('web/flasher/flash.html', 'utf8')
+  .match(/https:\/\/unpkg\.com\/esp-web-tools@[^'"]+/)[0];
+
+// Reachability is checked from node, not from the page: node honours the
+// environment's proxy and CA bundle, so this answers "is the dependency
+// published where the flasher says it is" rather than "can this particular
+// sandbox's browser reach the internet".
+const cdnStatus = await fetch(cdn, { method: 'GET' })
+  .then((r) => r.status).catch((e) => `failed: ${e.message}`);
+check(cdnStatus === 200, `the flasher's pinned dependency is unreachable (${cdn}): ${cdnStatus}`);
+
+const flash = await ctx.newPage();
+const flashProblems = [];
+flash.on('pageerror', (e) => flashProblems.push(`flasher uncaught: ${e.message}`));
+flash.on('console', (m) => {
+  if (m.type() !== 'error') return;
+  // Failures fetching the external dependency have their own assertions below;
+  // a browser that cannot reach a CDN is an environment, not a bug.
+  if ((m.location()?.url || '').startsWith('https://unpkg.com/')) return;
+  flashProblems.push(`flasher console: ${m.text()}`);
+});
+
+await flash.goto(`http://localhost:${PORT}/flash.html`, { waitUntil: 'load' });
+await flash.waitForTimeout(1500);
+
+// The build stamp comes from the manifest, so this failing means the page could
+// not read it - which is also how it would fail on the borrowed laptop.
+const stamp = await flash.$eval('#build-id', (e) => e.textContent.trim());
+check(/^\d+\.\d+\.\d+\+/.test(stamp), `flasher could not read its manifest: "${stamp}"`);
+
+const state = await flash.evaluate(() => ({
+  serial: 'serial' in navigator,
+  unsupported: getComputedStyle(document.getElementById('unsupported')).display !== 'none',
+  supported: !document.getElementById('supported').hidden,
+  defined: !!customElements.get('esp-web-install-button'),
+  why: document.getElementById('unsupported').textContent.replace(/\s+/g, ' ').trim(),
+}));
+
+// Exactly one panel, always. A page showing neither is a page that looks broken
+// to somebody standing over a borrowed laptop.
+check(state.supported !== state.unsupported,
+  `flasher shows both or neither panel: ${JSON.stringify(state)}`);
+
+if (state.supported) {
+  // If it offers to flash, the button has to be a real upgraded element rather
+  // than inert markup that does nothing when clicked.
+  check(state.defined, 'flasher offers an Install button that is not a defined custom element');
+} else {
+  // If it declines, it has to say why, and the reason has to be true: either
+  // this browser has no Web Serial, or the dependency did not load.
+  const noSerial = !state.serial && /cannot flash/i.test(state.why);
+  const noModule = state.serial && /could not load/i.test(state.why);
+  check(noSerial || noModule,
+    `flasher declined without a true reason (serial=${state.serial}): ${state.why.slice(0, 120)}`);
+}
+
+const flashMode = state.supported ? 'install button live'
+  : state.serial ? 'dependency did not load here' : 'no Web Serial in this browser';
+
+for (const p of flashProblems) problems.push(p);
+
 await browser.close();
 server.close();
 
@@ -141,3 +217,4 @@ if (problems.length) {
   process.exit(1);
 }
 console.log(`smoke test passed - ${first.fps} fps, ${groups} effect groups, ${defCount} definitions`);
+console.log(`flasher passed - build ${stamp}, ${flashMode}`);
