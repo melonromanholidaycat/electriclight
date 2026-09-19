@@ -187,6 +187,34 @@ contract cannot drift when someone adjusts a default.
 Regenerating it is `npm run vectors`, and the diff must be read. A vector that
 changes unintentionally is the firmware and the simulator about to disagree.
 
+## The radio is enabled by a gesture, not a switch position
+
+**Chosen:** sweeping the five-way from one end to the other within a few seconds
+of switching on. Mechanics in [`firmware-plan.md`](firmware-plan.md).
+
+**Rejected:**
+
+- *A nominated five-way position at switch-on.* Simplest to build and simplest
+  to explain, and useless: that is wherever the switch was last left.
+- *Brightness at minimum at switch-on.* Nobody sets that deliberately, and a
+  dark neck would be its own feedback — but it is exactly where the knob gets
+  left after a session, so the radio would come up on its own eventually.
+- *Both conditions together.* Two coincidences rather than one, and good enough
+  in practice. Rejected only because the gesture costs no more to build.
+
+**Why:** the brief wants the radio off so that nobody can connect mid-set, and
+every position-based trigger fails the same way — positions persist, so sooner
+or later the instrument powers up already holding the combination. A gesture has
+no resting state to leave it in.
+
+The cost is discoverability: a gesture cannot be worked out by looking at the
+instrument. That is acceptable for a control used by one person who has it
+written down, and unacceptable for anything else — which is why the same
+reasoning should not be reached for again without arguing it afresh.
+
+**What would reopen it:** anyone other than the owner needing to get the guitar
+online.
+
 ## The firmware is built on ESP-IDF
 
 **Chosen:** Espressif's own SDK, native.

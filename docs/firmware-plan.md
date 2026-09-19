@@ -226,26 +226,46 @@ pack, an update applied — has to be said with the 52 LEDs it already has.
 That is a firmware design constraint rather than a hardware one, but it belongs
 here because it decides what the instrument can communicate at all.
 
-### Open: how the radio gets switched on without a phone
+### Switching the radio on without a phone
 
-The brief requires the radio off unless deliberately enabled. The only inputs
-available for "deliberately" are the pot and the five-way, and the only moment
-they can be read before the radio comes up is at power-on — which the push-pull
-makes a well-defined event.
+The brief requires the radio off unless deliberately enabled, and the only
+inputs available for "deliberately" are the pot and the five-way. The chosen
+trigger is **a gesture**, because it is the only candidate that cannot be
+performed by accident; see [`decisions.md`](decisions.md) for what was rejected.
 
-Candidates, in ascending order of how hard they are to trigger by accident:
+**Sweep the five-way from one end position to the other, within a few seconds of
+switching on.** Direction does not matter. Both end positions have to be visited,
+which is a four-notch travel — far too large and too deliberate to happen while
+someone reaches for the guitar.
 
-- **Five-way in one nominated position at switch-on.** Simplest, and far too
-  easy to hit by accident: that is where the switch happens to be left.
-- **Brightness at minimum at switch-on.** Nobody does that deliberately, and the
-  dark neck is its own feedback — but it *is* where the knob gets left.
-- **Both together.** Two coincidences rather than one. Easy to perform, unlikely
-  to happen.
-- **A gesture: sweep the five-way end to end within a few seconds of switch-on.**
-  Essentially impossible by accident, and needs no particular starting state.
+The mechanics that make it work:
 
-The last is the most robust and the least discoverable; the third is the best
-balance. This is a decision for step 3 rather than something to settle here.
+- **The window starts when the firmware starts, not at power-on**, and the
+  bootloader takes a few hundred milliseconds before that. Default the window to
+  5 seconds — a person takes about one to move a hand to the switch — and make
+  it a remotely adjustable setting like everything else here.
+- **Break-before-make means no input is low while the switch is in transit.**
+  That state is normal during a sweep and a fault at rest; the firmware must not
+  confuse the two. It is also what makes a sweep legible rather than a jump.
+- **No gesture means the radio stays off** and the stored slot plays as usual.
+  That is the ordinary path, on stage and everywhere else.
+- **Turning it off again is a power cycle without the gesture.** Nothing to
+  remember.
+
+**Safe mode is the same gesture with the brightness at minimum.** One physical
+vocabulary rather than two, and minimum brightness is a position the knob has to
+be deliberately put in. Safe mode then does what it always did: ignore stored
+configuration, force the radio up on the compiled-in fallback access point.
+Boot-loop detection still reaches it with no gesture at all, for when nobody is
+there to perform one.
+
+**The strips confirm it**, because they are the only output the instrument has
+once it is closed. A single sweep of colour up the neck on success, distinct
+from anything an effect does at startup. Optionally one dim LED at the nut while
+the window is open, so it is possible to tell the gesture was seen at all rather
+than guessing.
+
+None of this is built yet — it is step 3.
 
 ## The potentiometer is 500 kΩ, and that needs handling
 
