@@ -646,8 +646,11 @@ test('the page and the firmware agree on how a guitar identifies itself', () => 
   const page = readFileSync(join(here, '..', 'src', 'main.js'), 'utf8');
   const identity = readFileSync(join(here, '..', '..', 'firmware', 'main', 'app_identity.h'), 'utf8');
 
-  const wanted = page.match(/info\.device === '([^']+)'/);
-  assert(wanted, 'web/src/main.js no longer compares info.device to a literal');
+  // Matched on the property, not the variable holding it: this caught a rename
+  // once, which is the guard working, but the name is not the thing it is
+  // supposed to be protecting.
+  const wanted = page.match(/\.device === '([^']+)'/);
+  assert(wanted, 'web/src/main.js no longer compares a .device field to a literal');
 
   const declared = identity.match(/#define\s+ELECTRICLIGHT_DEVICE_ID\s+"([^"]+)"/);
   assert(declared, 'app_identity.h no longer defines ELECTRICLIGHT_DEVICE_ID');
