@@ -23,3 +23,12 @@ const app_selftest_t *app_selftest_run(void);
 
 // The cached result, which reads "not run" until the first run finishes.
 const app_selftest_t *app_selftest_get(void);
+
+// True when this exact build has not yet passed the self-test on this board.
+//
+// Keyed on the running image's ELF hash rather than on "did an OTA just land",
+// which is what an earlier version asked. That was wrong in the one case that
+// matters most: an image flashed over the cable is not pending verification, so
+// it never self-tested - and a cable flash is the first time that code has ever
+// run on that particular silicon.
+bool app_selftest_is_new_build(void);

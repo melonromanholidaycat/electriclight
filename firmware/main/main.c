@@ -37,11 +37,7 @@ void app_main(void)
              desc ? desc->idf_ver : "?",
              app_ota_running_slot());
 
-    // Captured now because app_ota_confirm_if_healthy() below clears it, and
-    // because "is this image new?" decides whether the self-test is worth
-    // running on this boot.
-    const bool fresh_image = app_ota_pending_verify();
-    if (fresh_image) {
+    if (app_ota_pending_verify()) {
         ESP_LOGW(TAG, "this image is on probation and will roll back unless it "
                       "can reach the network");
     }
@@ -77,11 +73,13 @@ void app_main(void)
                       "boot counted against the rescue threshold");
     }
 
-    // Only now, and only on a new image. Three reasons for the placement:
+    // Only now, and only on a build this board has not already checked. Three
+    // reasons for the placement:
     //
-    //   It takes seconds. The ESP32-S3's FPU is single precision only, and the
-    //   evaluator is full of doubles on purpose, so they are emulated.
-    //   Ordinary boots should not pay for an answer that has not changed.
+    //   It takes twenty seconds, measured on hardware. The ESP32-S3's FPU is
+    //   single precision only and the evaluator is full of doubles on purpose,
+    //   so they are emulated. Ordinary boots should not pay twenty seconds for
+    //   an answer that has not changed since the last one.
     //
     //   It must not gate the rollback decision. A self-test that crashed on a
     //   new image would otherwise turn one bad frame into a boot loop, and a
@@ -92,7 +90,7 @@ void app_main(void)
     //   phone, not the firmware's, made in the dark.
     //
     // /api/selftest re-runs it at any time.
-    if (fresh_image) {
+    if (app_selftest_is_new_build()) {
         app_selftest_run();
     }
 

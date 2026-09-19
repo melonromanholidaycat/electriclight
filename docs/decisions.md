@@ -129,9 +129,17 @@ than a wrong one, and the two evaluators have to agree.
 because it has an FPU. The S3's FPU is **single precision only**, and that turns
 out to matter, because the firmware evaluator computes in double wherever the
 JavaScript does — see the next decision. Those doubles are emulated in software.
-Measured cost: the full golden-vector run takes about 34 ms on a desktop, and
-the heaviest single frame is well inside the 16.7 ms a 60 Hz frame allows even
-after scaling for the S3. The FPU is still the reason to prefer the S3 over the
+Measured, on hardware rather than estimated: the full golden-vector run takes
+**34 ms on a desktop and 19.9 s on the S3** — 586x, against the ~15x that clock
+speed alone would explain. The rest is the emulation.
+
+Per frame that is **6.9 ms for 52 pixels, about 41% of the 16.7 ms a 60 Hz frame
+allows.** An earlier version of this line called that "well inside" the budget,
+which was written before anyone had run it and is too comfortable a phrase for
+41%. The vector set is deliberately the heaviest thing the evaluator will ever
+be asked to do — it includes a torture case built from the most expensive
+built-ins — so real effects should sit well under it. That is an expectation,
+not a measurement, and step 5 should measure it rather than inherit it. The FPU is still the reason to prefer the S3 over the
 C3; it is just not the whole story.
 
 ## The firmware evaluator is a literal port, not a reimplementation
@@ -167,8 +175,15 @@ away the property the project is built on.
 ## The guitar checks itself, and reports rather than decides
 
 The golden vectors are compiled into the firmware (about 21 kB including the
-code). `GET /api/selftest` runs them on demand; a fresh image runs them once,
-after it has already confirmed itself.
+code). `GET /api/selftest` runs them on demand, and a build this board has not
+already passed runs them once at boot, after it has confirmed itself.
+
+**Keyed on the running image's ELF hash, not on "did an OTA just land".** The
+first version asked `app_ota_pending_verify()`, which is only true after an
+over-the-air update. An image flashed over the cable is not pending
+verification, so it never self-tested — and a cable flash is the first time that
+code has ever run on that particular piece of silicon, which is precisely when
+the answer is worth having.
 
 **Why on the device at all**, when CI runs the same check: CI cannot see a
 miscompile at a different optimisation level, a half-written OTA, flash that has

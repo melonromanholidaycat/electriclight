@@ -133,7 +133,7 @@ int main(void)
 
     // --- the golden vectors ---------------------------------------------------
     el_selftest_result_t r;
-    bool ok = el_selftest(&r);
+    bool ok = el_selftest(&r, NULL, NULL);
     char line[160];
     el_selftest_describe(&r, line, sizeof line);
     if (ok) {

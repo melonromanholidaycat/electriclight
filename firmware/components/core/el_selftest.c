@@ -23,7 +23,11 @@ const el_vectors_contract_t *el_vectors_contract(void)
     return &contract;
 }
 
-bool el_selftest(el_selftest_result_t *result)
+// Often enough that the longest uninterrupted stretch is a fraction of a
+// second, rather than the seconds a whole case takes.
+#define EL_SELFTEST_YIELD_EVERY 16
+
+bool el_selftest(el_selftest_result_t *result, el_selftest_yield_fn yield, void *ctx)
 {
     memset(result, 0, sizeof *result);
     result->cases_total = EL_VECTORS_CASE_COUNT;
@@ -77,6 +81,7 @@ bool el_selftest(el_selftest_result_t *result)
         int last = c->frames[c->frame_count - 1];
         bool limited = false;
         for (int frame = 0; frame <= last; frame++) {
+            if (yield && (frame % EL_SELFTEST_YIELD_EVERY) == 0) yield(ctx);
             const uint8_t *got = el_engine_step(engine);
             limited = limited || engine->limited;
             if (next >= c->frame_count || c->frames[next] != frame) continue;

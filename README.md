@@ -12,8 +12,13 @@ one, and carries the survival features — the gesture that brings the radio up,
 safe mode, boot-loop rescue, a log that outlives a crash. It now also renders
 effects: the same evaluator as the browser, reproducing every golden frame byte
 for byte, and carrying those vectors so the guitar can re-run the check on
-itself over WiFi. All of it builds green in CI and none of it has run on
-hardware yet.
+itself over WiFi.
+
+**It has run on hardware.** Boards are flashed from a web page; the firmware
+boots, brings up its own access point, serves the control page, accepts an
+update over the air, and reproduces all 104 golden frames on the device itself.
+What has not been built yet is anything that drives an LED, and nothing has been
+connected to a guitar.
 
 ```
 web/src/lang/     the effect language: tokeniser, parser, compiler, bytecode evaluator

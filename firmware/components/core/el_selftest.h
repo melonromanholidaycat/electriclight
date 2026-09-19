@@ -31,9 +31,17 @@ typedef struct {
     const char *error; // set when a program would not even decode
 } el_selftest_result_t;
 
+// Called periodically during a run so the caller can let something else happen.
+// This exists because the run is long: twenty seconds on an ESP32-S3, measured,
+// because the evaluator computes in double on a chip whose FPU is single
+// precision only. Twenty seconds of one core without yielding starves the idle
+// task and trips the task watchdog.
+typedef void (*el_selftest_yield_fn)(void *ctx);
+
 // Returns true if every case matched. Needs about 12 kB of heap for the
-// duration of the call and releases it before returning.
-bool el_selftest(el_selftest_result_t *result);
+// duration of the call and releases it before returning. `yield` may be NULL,
+// which is right for a host test and wrong for anything running an RTOS.
+bool el_selftest(el_selftest_result_t *result, el_selftest_yield_fn yield, void *ctx);
 
 // What the generated vectors record about web/src/lang/ops.js. Exposed so a
 // test can compare it with what el_eval.c believes, without pulling the whole

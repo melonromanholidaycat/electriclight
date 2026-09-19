@@ -646,6 +646,22 @@ Twenty minutes, and it can happen opportunistically the next time any laptop is
 nearby. Everything the firmware does after this — effects, settings, geometry,
 WiFi credentials, the web UI itself — arrives over the air.
 
+**Done.** What it established, in the order it mattered:
+
+- The board flashes from the web page, and comes up as its own access point with
+  no credentials stored. It marks itself healthy in that state, so a board on a
+  bench does not walk into safe mode after three power cycles.
+- **The over-the-air path works**, tested by pushing the same image back at the
+  device over its own AP. That is the assumption the whole project rests on and
+  it had never been exercised.
+- **The evaluator reproduces all 104 golden frames on the silicon**, with
+  newlib's libm rather than CI's. Step 4's contract, proven where it counts.
+
+Three things that only a real boot could have told us, all now fixed: the
+self-test never ran on a cable-flashed image, it starved the idle task for
+twenty seconds and tripped the task watchdog, and the page's instructions
+skipped the RESET that leaves the ROM loader after flashing.
+
 ### Session B — assemble and validate the guitar
 
 **Needs:** the parts, a soldering iron, a multimeter, and the guitar open.

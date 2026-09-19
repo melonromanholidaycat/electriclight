@@ -100,16 +100,30 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
 
   <h2>What to do</h2>
   <ol>
-    <li>Plug the board into this computer with a USB-C cable that <strong>carries
-      data</strong>. A charge-only cable will power the board and never appear as
-      a port, which looks exactly like a broken board.</li>
-    <li>Click <strong>Install</strong> and pick the port. It is usually the only
-      one in the list.</li>
+    <li><strong>Hold the BOOT button down while you plug the USB-C cable in</strong>,
+      then let go. On a board that has never run this firmware that is the normal
+      way in, not a rescue: the ESP32-S3 has no separate USB chip, so whether it
+      appears as a port at all depends on what the factory firmware does. Holding
+      BOOT starts the ROM loader, which always appears.</li>
+    <li>Use a cable that <strong>carries data</strong>. A charge-only cable powers
+      the board and never appears as a port, which looks exactly like a broken
+      board. If nothing new shows up, suspect the cable first.</li>
+    <li>Click <strong>Install</strong> and pick the port. <strong>It will not be the
+      only one listed</strong> — this computer's own serial ports appear too. The
+      board is the one that looks like <span class="mono">USB JTAG/serial debug
+      unit</span> or <span class="mono">USB Serial Device</span>. Anything
+      described as a PCI or built-in serial port is not it. Picking the wrong one
+      is harmless: flashing stops at the point where the chip fails to answer,
+      before anything is written.</li>
     <li>Choose <strong>Erase device</strong> on a board that has never run this
       firmware. It clears whatever the factory left behind. On a board already in
       use, <em>do not</em> erase: it would also wipe the stored WiFi credentials
       and effects. A plain install keeps them.</li>
     <li>Wait. About a minute.</li>
+    <li><strong>Press RESET when it finishes.</strong> The board is still sitting in
+      the ROM loader from step 1 — it will say <span class="mono">waiting for
+      download</span> in the log and do nothing else. One press of RESET, with BOOT
+      <em>not</em> held, starts the firmware you just installed.</li>
     <li>If it offers to set up WiFi over the cable and then says the device does
       not support it, that is expected. This firmware is configured from its own
       page instead.</li>
@@ -139,6 +153,11 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
   <p class="small muted">The phone is the only check that means anything today.
   The board has an addressable LED on GPIO48, but no firmware yet drives it &mdash; a
   dark board is not a failed flash.</p>
+  <p class="small muted">In the log you are looking for
+  <span class="mono">fallback access point "electriclight" is up</span> and
+  <span class="mono">main: ready</span>. On the first boot of a new build it also
+  runs the effect evaluator against the golden vectors, which takes about twenty
+  seconds and prints <span class="mono">16/16 cases, 104 frames, all match</span>.</p>
   <p class="small muted">The password is in the repository on purpose. It is a
   deterrent, not a secret: being locked out of a closed guitar is much worse than
   a stranger in radio range changing the lights.</p>
