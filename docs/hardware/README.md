@@ -69,6 +69,18 @@ that is the measurement being wrong, not the tape.
 
 Both were confirmed: the neck has 21 frets, counted.
 
+## The controller board
+
+**HW-747 V0.0.2**, an ESP32-S3 Super Mini. The header rows carry **GPIO1–13**
+plus RX/TX, 3V3, GND and 5V, and nothing else — confirmed against the board
+itself, not against a published pinout. The espboards.dev reference for this
+name describes a revision with far more pins broken out, and following it would
+have put LED data on GPIO15 and 16, which this board does not have.
+
+It is definitely an S3 and not a C3: the underside silkscreen lists GPIO33–48,
+and a C3 stops at 21. A red `CV3` marking on the front edge is a component or
+factory mark, unrelated.
+
 ## The controls, as found
 
 Confirmed by opening the guitar. **All 52 LEDs were verified working on the
@@ -177,9 +189,3 @@ Nothing should be designed around an assumption where one of these is missing.
 
 - The exact strip part, if the reel or tape carries a marking. Taken as
   WS2812B-equivalent for now: 5 V, three-wire, individually addressable.
-- **Confirmation of the header pin list read off the photographs**: GPIO1-13
-  along the two edges, plus RX/TX, 3V3, GND and 5V. The published reference for
-  "ESP32-S3 Super Mini" claims 32 GPIO across 37 pins; this board is marked
-  HW-747 V0.0.2 and plainly has fewer. The pin map now follows the board rather
-  than the reference — see [`../firmware-plan.md`](../firmware-plan.md) — so if
-  the reading is wrong, it is wrong in the firmware too.
