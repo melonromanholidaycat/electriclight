@@ -411,6 +411,34 @@ test('the flasher pins its dependency to an exact version', () => {
     'A flasher that changes under you between testing and a borrowed laptop is not a tool.');
 });
 
+test('the flasher does not promise a light nothing drives yet', () => {
+  // The page is read by somebody standing over a borrowed laptop deciding
+  // whether the flash worked. Telling him to look for an LED that no firmware
+  // lights would make a good board look like a dead one.
+  const page = readFileSync(join(here, '..', 'flasher', 'flash.html'), 'utf8');
+  const firmware = ['main.c', 'app_http.c', 'app_mode.c', 'app_wifi.c', 'app_inputs.c']
+    .map((f) => readFileSync(join(here, '..', '..', 'firmware', 'main', f), 'utf8')).join('');
+  const driven = /PIN_ONBOARD_LED/.test(firmware);
+  const promised = /onboard LED gives it away|LED will light|watch the LED/i.test(page);
+  assert(driven || !promised,
+    'the flasher tells the owner to look at the onboard LED, but no firmware drives it');
+});
+
+test('the flasher quotes the real access point credentials', () => {
+  // The page tells the owner what network to join to confirm the flash worked,
+  // while the borrowed computer is still in the room. Credentials that had
+  // drifted from the firmware would send him looking for a network that is not
+  // there, and the conclusion he would draw is that the board is dead.
+  const page = readFileSync(join(here, '..', 'flasher', 'flash.html'), 'utf8');
+  const identity = readFileSync(join(here, '..', '..', 'firmware', 'main', 'app_identity.h'), 'utf8');
+  for (const name of ['ELECTRICLIGHT_AP_SSID', 'ELECTRICLIGHT_AP_PASSWORD']) {
+    const value = identity.match(new RegExp(`${name}\\s+"([^"]+)"`));
+    assert(value, `app_identity.h no longer defines ${name}`);
+    assert(page.includes(`>${value[1]}<`),
+      `the flasher does not quote ${name} ("${value[1]}") as the firmware defines it`);
+  }
+});
+
 test('the flasher tells the truth about which browsers work', () => {
   // The owner has only an iPhone. A page that let him believe he could flash
   // from it would cost him a wasted evening rather than a wasted click.

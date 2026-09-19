@@ -106,11 +106,25 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
     <li>Click <strong>Install</strong> and pick the port. It is usually the only
       one in the list.</li>
     <li>Choose <strong>Erase device</strong> on a board that has never run this
-      firmware. It clears whatever the factory left behind.</li>
+      firmware. It clears whatever the factory left behind. On a board already in
+      use, <em>do not</em> erase: it would also wipe the stored WiFi credentials
+      and effects. A plain install keeps them.</li>
     <li>Wait. About a minute.</li>
+    <li>If it offers to set up WiFi over the cable and then says the device does
+      not support it, that is expected. This firmware is configured from its own
+      page instead.</li>
     <li><strong>Do all three boards</strong> while the computer is here. Spares are
       only spares if they are ready to swap in.</li>
   </ol>
+
+  <div class="card">
+    <p style="margin:0 0 8px"><strong>While you are here: read the boot log.</strong></p>
+    <p class="small" style="margin:0">Click the button again on a flashed board and
+    choose <strong>Logs &amp; Console</strong>. This is the only moment in the project
+    when serial output exists at all — the finished instrument has no console, which
+    is why so much of the firmware is built to report over WiFi instead. Worth a look
+    before the computer goes back.</p>
+  </div>
 
   <h2>Before you hand the computer back</h2>
   <p>Check the board actually came up, using your phone — while a second flash is
@@ -121,17 +135,21 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
     <li>Open <a href="http://192.168.4.1/">192.168.4.1</a>. The control page
       should load, with a <span class="badge on">device</span> badge instead of
       <span class="badge">simulator</span>.</li>
-    <li>The onboard LED gives it away too, before you even reach for the phone.</li>
   </ol>
+  <p class="small muted">The phone is the only check that means anything today.
+  The board has an addressable LED on GPIO48, but no firmware yet drives it &mdash; a
+  dark board is not a failed flash.</p>
   <p class="small muted">The password is in the repository on purpose. It is a
   deterrent, not a secret: being locked out of a closed guitar is much worse than
   a stranger in radio range changing the lights.</p>
 
   <h2>If the board is not offered as a port</h2>
   <p class="small">A board whose firmware is broken can still be flashed, but it may
-  need to be put into download mode by hand: <strong>hold BOOT, tap RESET, release
-  BOOT</strong>, then click Install again. That path works no matter what is on the
-  board, which is why a bad image is never permanent.</p>
+  need to be put into download mode by hand: <strong>hold the BOOT button down while
+  you plug the USB cable in</strong>, then release it and click Install. (If the board
+  has a RESET button as well, holding BOOT and tapping RESET does the same thing
+  without unplugging.) That path works no matter what is on the board, which is why
+  a bad image is never permanent.</p>
 
   <hr>
   <p class="small muted">Source, and the reasoning behind all of it:
