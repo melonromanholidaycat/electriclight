@@ -4,18 +4,36 @@ What has to be true before and during the cabled session, written down while it
 is fresh, because the session is scarce and the cost of arriving with the wrong
 module is a delay measured in weeks.
 
-**Built so far (step 2):** an ESP-IDF project in [`firmware/`](../firmware/)
-that boots, joins a known network or falls back to its own access point,
-announces itself over mDNS, serves the embedded control page, exposes
-`/api/status`, `/api/log` and `/api/ota`, and takes a firmware image over the
-air with automatic rollback if the new one cannot be reached. No LED output and
-no effect evaluator yet — those are steps 3 and 4.
+**Built so far (steps 2 and 3):** an ESP-IDF project in
+[`firmware/`](../firmware/) that boots, decides on what terms the radio comes
+up, joins a known network or falls back to its own access point, announces
+itself over mDNS, serves the embedded control page, exposes `/api/status`,
+`/api/log`, `/api/ota`, `/api/wifi` and `/api/radio`, and takes a firmware image
+over the air with automatic rollback if the new one cannot be reached.
 
-Two things in it are deliberately provisional and must change before the guitar
-is closed. The radio follows a stored setting that defaults **on**, because
-there is no hardware yet to read a boot gesture from; and the health check that
-confirms a new image counts "reachable" as healthy, which will want to include
-"the LEDs actually lit" once there are any.
+The survival features are in: the sweep gesture, safe mode on the same gesture
+with the brightness down, boot-loop rescue after three boots that never reach a
+healthy state, and a log in RTC memory that survives a crash. The decisions are
+plain C in [`../firmware/components/core`](../firmware/components/core) with no
+ESP-IDF in them, and CI compiles and runs them natively on every push.
+
+No LED output and no effect evaluator yet — that is step 4. **832 KB**, which
+leaves 47% of a 4 MB module's app slot free.
+
+Three things are deliberately provisional and must change before the guitar is
+closed:
+
+- **`radio_always_on` defaults on**, because a bare board has no way to perform
+  a gesture. `POST /api/radio {"alwaysOn": false}` arms the gesture, and that is
+  the moment the brief's "radio off unless deliberately enabled" starts holding.
+  Until then this firmware is more reachable and less discreet than the finished
+  instrument.
+- **The health check counts "reachable" as healthy.** It should eventually also
+  mean the LEDs lit, once there are any to light.
+- **Nothing is wired to the input pins.** The firmware handles that — with
+  pull-ups and no wiring, every switch pin reads high, which is
+  indistinguishable from mid-sweep, so it never sees a gesture rather than
+  inventing one — but no gesture has yet been read from a real switch.
 
 The guiding rule from the brief: **anything that cannot be changed over WiFi is
 effectively permanent.** Most of this document is that rule applied.

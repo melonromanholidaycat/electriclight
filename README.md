@@ -6,10 +6,11 @@ ESP32-S3 so effects can be designed, edited and deployed over WiFi. See
 
 ## Where this is
 
-**Steps 1 and 2 of 7.** The simulator runs in a browser today. The firmware
-boots, serves that same page and accepts an update over the air, and builds
-green in CI — but has never run on hardware, because the guitar has been
-measured and photographed but not opened.
+**Steps 1 to 3 of 7.** The simulator runs in a browser today. The firmware
+boots, serves that same page, accepts an update over the air and survives a bad
+one, and carries the survival features — the gesture that brings the radio up,
+safe mode, boot-loop rescue, a log that outlives a crash. All of it builds green
+in CI and none of it has run on hardware yet.
 
 ```
 web/src/lang/     the effect language: tokeniser, parser, compiler, bytecode evaluator
@@ -18,6 +19,8 @@ web/src/ui/       canvas neck, knob, five-way switch
 web/build.js      inlines it all into one self-contained page
 web/test/         unit tests, golden vectors, browser smoke test
 firmware/         ESP-IDF project: boots, serves the page, takes an OTA update
+firmware/components/core   the decision logic, plain C, tested on the host
+firmware/test_host/        those tests
 docs/             specification, decisions, firmware plan, hardware photographs
 ```
 

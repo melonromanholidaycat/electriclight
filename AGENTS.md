@@ -183,7 +183,11 @@ needed for, is [`docs/firmware-plan.md`](docs/firmware-plan.md).
 2. ~~CI pipeline plus a minimal firmware that boots, serves a page and accepts a
    wireless update.~~ Done. Both flash layouts build green in CI, the image is
    published as an artefact, and OTA rolls back an image that cannot be reached.
-3. The survival features above.
+3. ~~The survival features above.~~ Done. Boot-loop rescue, the gesture that
+   brings the radio up, safe mode, and a log that survives a crash. The policy
+   is plain C in `firmware/components/core` and CI runs it natively, so the
+   rules that decide whether a closed guitar stays reachable are tested without
+   one.
 4. Bring the effect interpreter to the firmware, matching the simulator exactly.
    `web/test/vectors.json` is the contract it must reproduce.
 5. Live control: the page detects it's on-device, pushes and stores effects.
