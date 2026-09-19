@@ -1,17 +1,21 @@
 // electriclight firmware.
 //
-// Step 2 of the sequence in AGENTS.md: boot, serve the control page, and accept
-// a firmware update over the air - including surviving a bad one. There is no
-// LED output and no effect evaluator yet; those are steps 3 and 4.
+// Steps 2 and 3 of the sequence in AGENTS.md: boot, decide on what terms the
+// radio comes up, serve the control page, accept an update over the air, and
+// survive a bad one.
 //
-// The order below is deliberate. Logging is captured before anything can fail,
-// configuration is read before the radio needs it, and the running image is
-// only confirmed good once it has proved it can be reached.
+// The order below is deliberate and most of it is load-bearing. Logging is
+// captured before anything can fail. The boot is counted before anything can
+// crash, so that a firmware which cannot stay up still reaches a state someone
+// can talk to. The running image is confirmed good only once it has proved it
+// can be reached.
 
 #include "app_config.h"
 #include "app_http.h"
 #include "app_identity.h"
+#include "app_inputs.h"
 #include "app_log.h"
+#include "app_mode.h"
 #include "app_ota.h"
 #include "app_wifi.h"
 #include "esp_app_desc.h"
@@ -38,18 +42,35 @@ void app_main(void)
     }
 
     ESP_ERROR_CHECK(app_config_init());
-    ESP_ERROR_CHECK(app_wifi_start());
+    ESP_ERROR_CHECK(app_inputs_init());
+
+    // Counts this boot as unhealthy, then watches the five-way. Blocks for the
+    // gesture window at most.
+    const el_radio_mode_t radio = app_mode_decide();
+
+    ESP_ERROR_CHECK(app_wifi_start(radio));
 
     if (app_wifi_has_ip()) {
         ESP_ERROR_CHECK(app_http_start());
     } else {
-        ESP_LOGW(TAG, "radio is off, so nothing is being served");
+        ESP_LOGI(TAG, "radio is off, so nothing is being served");
     }
 
     // Give the network a moment to settle before deciding whether this image
-    // deserves to be kept.
+    // deserves to be kept, and whether this boot counts as healthy.
     vTaskDelay(pdMS_TO_TICKS(5000));
-    app_ota_confirm_if_healthy();
+
+    // Reachable when it was meant to be. With the radio deliberately off there
+    // is nothing to be reachable on, and refusing to call that healthy would
+    // send a perfectly good instrument into safe mode for being discreet.
+    const bool healthy = (radio == EL_RADIO_OFF) || app_wifi_has_ip();
+    if (healthy) {
+        app_mode_mark_healthy();
+        app_ota_confirm_if_healthy();
+    } else {
+        ESP_LOGE(TAG, "the radio was meant to be up and is not; leaving this "
+                      "boot counted against the rescue threshold");
+    }
 
     ESP_LOGI(TAG, "ready");
 }

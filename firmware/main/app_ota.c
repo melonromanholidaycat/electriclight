@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "app_mode.h"
 #include "app_wifi.h"
 #include "esp_app_desc.h"
 #include "esp_log.h"
@@ -30,10 +31,11 @@ void app_ota_confirm_if_healthy(void)
 {
     if (!app_ota_pending_verify()) return;
 
-    // "Healthy" for this device means reachable. An image that boots but cannot
-    // be reached is exactly as useless as one that does not boot, and far more
-    // annoying, because nothing rolls it back automatically.
-    if (app_wifi_has_ip()) {
+    // "Healthy" for this device means reachable, or deliberately silent. An
+    // image that boots but cannot be reached when it was supposed to be is
+    // exactly as useless as one that does not boot, and far more annoying,
+    // because nothing rolls it back automatically.
+    if (app_wifi_has_ip() || app_mode_current() == EL_RADIO_OFF) {
         ESP_LOGI(TAG, "new image is reachable; confirming it good");
         esp_ota_mark_app_valid_cancel_rollback();
     } else {

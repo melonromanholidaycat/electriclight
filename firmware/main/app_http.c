@@ -6,6 +6,7 @@
 #include "app_config.h"
 #include "app_identity.h"
 #include "app_log.h"
+#include "app_mode.h"
 #include "app_ota.h"
 #include "app_wifi.h"
 #include "cJSON.h"
@@ -49,6 +50,10 @@ static esp_err_t get_status(httpd_req_t *req)
     cJSON_AddStringToObject(root, "build", desc ? desc->version : "?");
     cJSON_AddStringToObject(root, "idf", desc ? desc->idf_ver : "?");
     cJSON_AddStringToObject(root, "wifi", app_wifi_mode_name());
+    cJSON_AddStringToObject(root, "radio", el_radio_name(app_mode_current()));
+    cJSON_AddBoolToObject(root, "safeMode", app_mode_boot() == EL_BOOT_SAFE);
+    cJSON_AddNumberToObject(root, "bootCount", app_mode_boot_count());
+    cJSON_AddBoolToObject(root, "radioAlwaysOn", cfg->radio_always_on);
     cJSON_AddStringToObject(root, "ip", ip);
     cJSON_AddStringToObject(root, "slot", app_ota_running_slot());
     cJSON_AddBoolToObject(root, "pendingVerify", app_ota_pending_verify());
@@ -69,9 +74,9 @@ static esp_err_t get_log(httpd_req_t *req)
 {
     // Sized to hold the whole ring buffer; this is the only window into a
     // device with no serial port, so truncating it would defeat the point.
-    char *buf = malloc(8320);
+    char *buf = malloc(4224);
     if (!buf) return httpd_resp_send_500(req);
-    size_t len = app_log_read(buf, 8320);
+    size_t len = app_log_read(buf, 4224);
     httpd_resp_set_type(req, "text/plain; charset=utf-8");
     esp_err_t err = httpd_resp_send(req, buf, len);
     free(buf);
@@ -178,6 +183,40 @@ static esp_err_t post_wifi(httpd_req_t *req)
     return ESP_OK;
 }
 
+// Turning this off is what arms the gesture. It is a separate endpoint rather
+// than part of a general settings write because it is the one setting that can
+// make the guitar unreachable, and it should be hard to change by accident.
+static esp_err_t post_radio_policy(httpd_req_t *req)
+{
+    char body[128];
+    if (read_body(req, body, sizeof(body)) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "body too large");
+        return ESP_FAIL;
+    }
+
+    cJSON *root = cJSON_Parse(body);
+    const cJSON *always = cJSON_GetObjectItem(root, "alwaysOn");
+    if (!cJSON_IsBool(always)) {
+        cJSON_Delete(root);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "expected {alwaysOn: true|false}");
+        return ESP_FAIL;
+    }
+    const bool on = cJSON_IsTrue(always);
+    cJSON_Delete(root);
+
+    esp_err_t err = app_config_set_radio_always_on(on);
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, esp_err_to_name(err));
+        return ESP_FAIL;
+    }
+
+    ESP_LOGW(TAG, "radio always-on is now %s; takes effect at the next restart",
+             on ? "enabled" : "disabled");
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_sendstr(req, on ? "{\"ok\":true,\"alwaysOn\":true}"
+                                      : "{\"ok\":true,\"alwaysOn\":false}");
+}
+
 static const httpd_uri_t ROUTES[] = {
     { .uri = "/",            .method = HTTP_GET,  .handler = get_index },
     { .uri = "/index.html",  .method = HTTP_GET,  .handler = get_index },
@@ -185,6 +224,7 @@ static const httpd_uri_t ROUTES[] = {
     { .uri = "/api/log",     .method = HTTP_GET,  .handler = get_log },
     { .uri = "/api/ota",     .method = HTTP_POST, .handler = post_ota },
     { .uri = "/api/wifi",    .method = HTTP_POST, .handler = post_wifi },
+    { .uri = "/api/radio",   .method = HTTP_POST, .handler = post_radio_policy },
 };
 
 esp_err_t app_http_start(void)

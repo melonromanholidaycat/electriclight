@@ -83,12 +83,12 @@ static esp_err_t start_fallback_ap(void)
     return ESP_OK;
 }
 
-esp_err_t app_wifi_start(void)
+esp_err_t app_wifi_start(el_radio_mode_t mode)
 {
     const app_config_t *cfg = app_config_get();
 
-    if (!cfg->radio_on_boot) {
-        ESP_LOGI(TAG, "radio disabled by configuration");
+    if (mode == EL_RADIO_OFF) {
+        ESP_LOGI(TAG, "radio off; no gesture was performed");
         s_mode = APP_WIFI_DOWN;
         return ESP_OK;
     }
@@ -102,7 +102,14 @@ esp_err_t app_wifi_start(void)
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_event, NULL, NULL));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, on_event, NULL, NULL));
 
-    if (cfg->sta_ssid[0]) {
+    // Safe mode skips this entirely. Stored credentials are exactly the kind of
+    // thing that strands a closed guitar, so the rescue path must not depend on
+    // them being right.
+    if (mode == EL_RADIO_SAFE && cfg->sta_ssid[0]) {
+        ESP_LOGW(TAG, "safe mode: ignoring stored credentials for %s", cfg->sta_ssid);
+    }
+
+    if (mode != EL_RADIO_SAFE && cfg->sta_ssid[0]) {
         s_sta_netif = esp_netif_create_default_wifi_sta();
         wifi_config_t sta = {0};
         strlcpy((char *)sta.sta.ssid, cfg->sta_ssid, sizeof(sta.sta.ssid));

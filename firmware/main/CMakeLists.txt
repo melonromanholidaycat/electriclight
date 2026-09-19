@@ -13,6 +13,8 @@ idf_component_register(
         "app_wifi.c"
         "app_http.c"
         "app_ota.c"
+        "app_inputs.c"
+        "app_mode.c"
     INCLUDE_DIRS "."
     EMBED_FILES "www/index.html.gz"
     REQUIRES
@@ -25,5 +27,8 @@ idf_component_register(
         esp_app_format
         esp_timer
         esp_system
+        esp_adc
+        driver
+        core
         json
 )

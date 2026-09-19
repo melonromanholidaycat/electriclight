@@ -24,6 +24,14 @@ jobs:
       # No dependencies: the unit tests and the bundler are plain node.
       - name: Unit tests and golden vectors
         run: node web/test/run.js
+      # The firmware's decision logic is plain C with no ESP-IDF in it, so the
+      # parts that decide whether a closed guitar stays reachable are tested
+      # here in seconds rather than on hardware.
+      - name: Firmware core tests, on the host
+        run: |
+          gcc -Wall -Wextra -Werror -o /tmp/core-tests \
+            firmware/test_host/test_core.c firmware/core/*.c -Ifirmware/core
+          /tmp/core-tests
       - name: Build the page
         run: node web/build.js
       - uses: actions/upload-artifact@v4

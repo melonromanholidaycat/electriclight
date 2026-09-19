@@ -5,17 +5,26 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "esp_attr.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-// 8 KB holds a few minutes of ordinary logging, and comfortably more of the
-// only kind that matters: whatever was printed just before something broke.
-#define LOG_CAPACITY 8192
+// The buffer lives in RTC memory and is not zeroed at start-up, so it survives
+// a restart. That is the entire point: on a device with no serial port, the
+// interesting log is the one written just before the firmware fell over, and an
+// ordinary buffer loses exactly that.
+//
+// A power cycle still clears it - the push-pull cuts the supply - but a crash,
+// a watchdog or a rollback does not, and those are the cases worth seeing.
+// 4 KB rather than 8, because RTC slow memory is small and shared.
+#define LOG_CAPACITY 4096
+#define LOG_MAGIC 0x4C474F4Cu  // "LOGL"
 
-static char s_buf[LOG_CAPACITY];
-static size_t s_head;      // next write position
-static bool s_wrapped;
+RTC_NOINIT_ATTR static char s_buf[LOG_CAPACITY];
+RTC_NOINIT_ATTR static uint32_t s_magic;
+RTC_NOINIT_ATTR static size_t s_head;
+RTC_NOINIT_ATTR static bool s_wrapped;
 static SemaphoreHandle_t s_lock;
 static vprintf_like_t s_chain;
 
@@ -58,7 +67,24 @@ void app_log_init(void)
 {
     if (s_lock) return;
     s_lock = xSemaphoreCreateMutex();
+
+    // Trust the surviving contents only if the magic and the head index are
+    // both credible. Uninitialised RTC memory is arbitrary, and treating
+    // arbitrary bytes as a log would be worse than having none.
+    const bool survived = (s_magic == LOG_MAGIC && s_head < LOG_CAPACITY);
+    if (!survived) {
+        memset(s_buf, 0, sizeof(s_buf));
+        s_head = 0;
+        s_wrapped = false;
+        s_magic = LOG_MAGIC;
+    }
+
     s_chain = esp_log_set_vprintf(capture);
+
+    if (survived) {
+        // Everything above this line is from before the restart.
+        ESP_LOGW("log", "---- restarted; the log above is from the previous run ----");
+    }
 }
 
 size_t app_log_read(char *out, size_t max)
