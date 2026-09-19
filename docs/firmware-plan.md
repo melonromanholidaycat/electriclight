@@ -318,6 +318,11 @@ Worst case is **every LED at full white: 3.1 A at 5 V**, about 15.6 W, which
 through a buck converter is roughly **2.5 A from a 7.2 V pack**. (LED counts and
 every other measurement: [`hardware/`](hardware/).)
 
+- **Confirm the pack is six cells in series before buying a converter.** The
+  measured 4.63 V suggests the old pack was three or four cells, not six — and a
+  buck converter steps down only. Six NiMH in series gives 7.2 V nominal, 8.4 V
+  charged, 6.0 V empty: always above 5 V, which is exactly what a buck wants. A
+  4.5 V pack would need a boost or buck-boost instead, which is a different part.
 - Size the buck for the worst case with headroom. A 3 A module is not enough;
   many cheap ones cannot hold 3 A in practice. A synchronous 5 A part is the
   comfortable choice.
@@ -325,7 +330,11 @@ every other measurement: [`hardware/`](hardware/).)
   thin wires up the neck. Cheap holders sag noticeably under load, and a sagging
   supply is indistinguishable from a firmware fault when you cannot see a serial
   port.
-- NiMH rather than alkaline — alkalines sag badly under this kind of load.
+- NiMH rather than alkaline, and this is now measured rather than asserted: at
+  0.15–0.3 Ω per cell, three alkalines in series lose around 2 V inside the cells
+  at 3 A. NiMH sits nearer 0.03–0.05 Ω per cell, an order of magnitude better,
+  and it is why the old build's brightness collapsed exactly when an effect asked
+  for the most light.
 - Bulk capacitance close to the strips, and proper decoupling at the board.
   Radio transmission spikes can brown out an ESP32 that looks adequately
   supplied at DC.

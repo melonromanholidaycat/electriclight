@@ -99,13 +99,25 @@ now. See [`../firmware-plan.md`](../firmware-plan.md) for what it costs in pins
 and why a different part is the answer when orientation work eventually
 happens.
 
-**No separate voltage regulator could be found**, and the question is now closed
-unanswered. Two conductors ran from the battery cavity to the push-pull switch
-with no regulator chip or module anywhere on the loom; the likeliest explanation
-was the Arduino Nano's own on-board linear regulator, which would have explained
-the long-standing suspicion that the old setup capped brightness. It could not
-be confirmed — the solder joints were poor enough that several conductors
-snapped during disassembly, before a measurement could be taken.
+**There was no regulator because the old build did not need one.** Two
+conductors ran from the battery cavity to the push-pull switch with no regulator
+chip or module anywhere on the loom, and **the pack measures 4.63 V** — already
+inside what a WS2812B will run on. The strips were fed from the cells directly.
+
+That also corrects an earlier guess in this file, that the Nano's own on-board
+regulator was feeding them. It was not; nothing was.
+
+4.63 V rules out six cells in series, which would be 0.77 V each — flat past the
+point of working at all, not merely "old". The arithmetic fits **three cells at
+1.54 V each, which is a fresh alkaline**, or four at 1.16 V, which is a
+part-used alkaline or a healthy NiMH. So the pack is very unlikely to be the
+6-series arrangement the brief has always assumed.
+
+And it finally explains the capped brightness properly. Alkaline cells have an
+internal resistance around 0.15–0.3 Ω each, rising as they deplete. Three in
+series lose about 1.3 V inside the cells at 2 A and 2 V at 3 A — so the harder
+an effect drove the strips, the further the supply collapsed. The ceiling was
+never the regulator. It was the chemistry.
 
 It does not matter. **The rebuild feeds the strips 5 V because that is what they
 are specified for**, not because of anything the old build did. Reverse-
@@ -126,9 +138,10 @@ deliver, and the rebuild asks for considerably more.
 
 Nothing should be designed around an assumption where one of these is missing.
 
-- **Where the conductors snapped.** A break anywhere along the run is nothing —
-  that wiring is being replaced regardless. A break at the tape's own solder pads
-  on the fretboard is the one repair here that is genuinely delicate.
+- **How many cells the holder actually takes, and whether it is wired in series
+  or as parallel banks.** This decides whether the rebuild needs a buck converter
+  or a boost one, and a buck cannot step 4.5 V up to 5 V. It is the last thing
+  that could change what to buy.
 
 - The exact strip part, if the reel or tape carries a marking. Taken as
   WS2812B-equivalent for now: 5 V, three-wire, individually addressable.
