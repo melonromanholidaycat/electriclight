@@ -274,6 +274,23 @@ simulator stays up regardless.
 fallback is the same binaries and `esptool`, which is why CI still publishes
 them as a plain artefact.
 
+## Effects travel compiled; geometry does not travel at all
+
+`POST /api/effects` carries five slots of ELFX bytecode, their parameter values,
+and the output chain's settings. It does not carry the neck geometry.
+
+**Why the split:** brightness, gamma and the current budget are settings, and
+changing one costs a lookup-table rebuild. The pixel count is structural -
+changing it means rebuilding the layout and re-initialising the LED driver's RMT
+channels, which is not a thing to do halfway through an upload from a phone. So
+geometry stays a firmware constant for now, `/api/status` reports what the
+device is actually rendering, and the page says plainly when the two disagree.
+Silence there would be the simulator drifting from the device, which is the one
+failure this project is built against.
+
+**What would reopen it:** measuring the neck and finding the LED count wrong,
+which is likely. The work is a re-init path for the driver, not a format change.
+
 ## The page is one self-contained file
 
 Sources are ES modules so node can unit-test them; `web/build.js` inlines them

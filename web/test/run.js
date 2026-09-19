@@ -11,6 +11,7 @@ import { fretDistance, fretAt, buildPixels, ledPitch, litSpan, DEFAULT_GEOMETRY 
 import { defaultLibrary, buildLayers, presetsByDefinition, resolveValues, programFor } from '../src/model/library.js';
 import { buildVectors, GEOMETRY, OUTPUTS } from './vectors.js';
 import { manifestFor, VARIANTS, PARTITION_TABLE_OFFSET } from '../gen-flasher.js';
+import { buildEffectsPayload } from '../src/ui/device.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -335,6 +336,40 @@ test('the firmware output chain defaults match the simulator', () => {
 // both being written down and hoped about.
 // Any document that quotes the size of the golden vector set has to be right
 // about it. The set grows; prose does not notice.
+// --- what the page sends the guitar -------------------------------------------
+
+test('the default library compiles into a payload the firmware accepts', () => {
+  const { payload, problems } = buildEffectsPayload(defaultLibrary());
+  assert(problems.length === 0, `default library will not compile: ${problems.join('; ')}`);
+  assert(payload.slots.length === 5, `payload has ${payload.slots.length} slots, expected 5`);
+  for (const slot of payload.slots) {
+    assert(slot && slot.program, 'a default slot produced no program');
+    // The firmware decodes this and nothing else, so it has to survive the
+    // round trip through base64 and the wire format.
+    const program = decodeProgram(fromBase64(slot.program));
+    assert(program.nParams === slot.params.length,
+      `${slot.name}: ${slot.params.length} values sent for ${program.nParams} parameters`);
+  }
+});
+
+test('the payload fits in the buffer the firmware reserves for it', () => {
+  // A payload that outgrew the device's limit would be refused with a message
+  // nobody would connect to having added an effect. Cheaper to notice here.
+  const header = readFileSync(join(here, '..', '..', 'firmware', 'main', 'app_effects.h'), 'utf8');
+  const limit = header.match(/#define\s+APP_EFFECTS_MAX_JSON\s+(\d+)/);
+  assert(limit, 'app_effects.h no longer states a payload limit');
+
+  const { payload } = buildEffectsPayload(defaultLibrary());
+  const size = JSON.stringify(payload).length;
+  assert(size < Number(limit[1]),
+    `the default payload is ${size} bytes and the firmware accepts ${limit[1]}`);
+  // Half the budget spent before the owner has written a single effect of their
+  // own would be a limit that is about to become a problem.
+  assert(size < Number(limit[1]) / 2,
+    `the default payload already uses ${Math.round((size / Number(limit[1])) * 100)}% ` +
+    'of the firmware\'s limit; raise APP_EFFECTS_MAX_JSON before it bites');
+});
+
 // --- the web flasher ----------------------------------------------------------
 //
 // It gets one shot on a borrowed computer, so the things that would waste that

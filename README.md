@@ -6,7 +6,7 @@ ESP32-S3 so effects can be designed, edited and deployed over WiFi. See
 
 ## Where this is
 
-**Steps 1 to 4 of 7.** The simulator runs in a browser today. The firmware
+**Steps 1 to 5 of 7.** The simulator runs in a browser today. The firmware
 boots, serves that same page, accepts an update over the air and survives a bad
 one, and carries the survival features — the gesture that brings the radio up,
 safe mode, boot-loop rescue, a log that outlives a crash. It now also renders
@@ -17,13 +17,15 @@ itself over WiFi.
 **It has run on hardware.** Boards are flashed from a web page; the firmware
 boots, brings up its own access point, serves the control page, accepts an
 update over the air, and reproduces all 104 golden frames on the device itself.
-What has not been built yet is anything that drives an LED, and nothing has been
-connected to a guitar.
+It renders at 60 Hz on its own core and drives WS2812 strips, so a bare board on
+a desk lights its own LED without a guitar attached.
+
+Nothing has been connected to a guitar yet.
 
 ```
 web/src/lang/     the effect language: tokeniser, parser, compiler, bytecode evaluator
 web/src/model/    neck geometry, render engine, effect library
-web/src/ui/       canvas neck, knob, five-way switch
+web/src/ui/       canvas neck, knob, five-way switch, the device panel
 web/build.js      inlines it all into one self-contained page
 web/flasher/      the web flasher: installs firmware over USB from a browser tab
 web/test/         unit tests, golden vectors, browser smoke test

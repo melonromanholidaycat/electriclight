@@ -168,3 +168,35 @@ button:active { background: #23262e; }
 @media (min-width: 720px) {
   #stage { flex: 1 1 55vh; }
 }
+
+/* --- the device panel ----------------------------------------------------- */
+
+#device { margin-bottom: 18px; }
+
+table.kv {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; margin: 8px 0 12px;
+}
+table.kv th {
+  text-align: left; font-weight: 500; color: var(--dim);
+  padding: 4px 10px 4px 0; white-space: nowrap; vertical-align: top;
+  width: 1%;
+}
+table.kv td { padding: 4px 0; font-variant-numeric: tabular-nums; }
+table.kv tr + tr th, table.kv tr + tr td { border-top: 1px solid var(--line); }
+
+.status { font-size: 12px; margin: 6px 0 2px; min-height: 1em; color: var(--dim); }
+.status.good { color: var(--accent); }
+.status.bad { color: var(--err); }
+.good { color: var(--accent); }
+.bad { color: var(--err); }
+.dim { color: var(--dim); }
+.note.warn { color: var(--warn); }
+
+/* A file input is the one control here that cannot be styled into matching the
+   rest, so it is given room rather than forced. */
+#devOtaFile {
+  font-size: 12px; color: var(--dim);
+  background: var(--panel2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px; min-width: 0;
+}

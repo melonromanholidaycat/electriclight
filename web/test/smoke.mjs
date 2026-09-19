@@ -12,9 +12,42 @@ const check = (cond, msg) => { if (!cond) problems.push(msg); };
 
 const TYPES = { '.html': 'text/html', '.json': 'application/json', '.bin': 'application/octet-stream' };
 
+// Flipped on for the second half of the run, so the same page is driven in both
+// of the contexts it has to work in rather than only the one Pages serves.
+let pretendDevice = false;
+let lastEffects = null;
+
+const DEVICE_STATUS = {
+  device: 'electriclight', name: 'electriclight', version: '0.1.0-test',
+  wifi: 'access point', ip: '192.168.4.1', slot: 'ota_0', pendingVerify: false,
+  heap: 180000, uptime: 42,
+  render: {
+    frames: 600, late: 0, lastUs: 6900, worstUs: 9100, avgUs: 7000,
+    budgetUs: 16667, currentMa: 310, limited: false, slot: 2, effect: 'Walk Up',
+  },
+  selftest: { ran: true, ok: true, ms: 19941, summary: '16/16 cases, 104 frames, all match' },
+  geometry: { ledsPerStrip: 26, frets: 21, scaleLength: 648, brightnessCeiling: 0.5, gamma: 2.2, currentBudget: 1500 },
+};
+
 const server = createServer((req, res) => {
   const url = (req.url || '').split('?')[0];
   const path = url === '/' ? '/index.html' : url;
+
+  if (pretendDevice && path === '/api/status') {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(DEVICE_STATUS));
+    return;
+  }
+  if (pretendDevice && path === '/api/effects' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      lastEffects = body;
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end('{"ok":true}');
+    });
+    return;
+  }
   // Serve dist/ the way Pages does, so the flasher can reach its manifests.
   // Anything absent 404s - including api/status, since there is no device here.
   if (/^\/[\w./-]+$/.test(path) && !path.includes('..')) {
@@ -139,6 +172,66 @@ check(/2 LEDs/.test(clamped), `zero LEDs was not clamped: ${clamped}`);
 await page.click('.tab[data-tab=play]');
 await page.waitForTimeout(400);
 if (process.env.SMOKE_SHOT) await page.screenshot({ path: process.env.SMOKE_SHOT });
+
+// --- the page as the guitar serves it -----------------------------------------
+//
+// The same file is the simulator and the control surface, and until now only
+// the simulator half was ever driven. A device panel that throws on a real
+// guitar would reach the owner as a blank tab on a phone with no console.
+
+pretendDevice = true;
+const dev = await ctx.newPage();
+const devProblems = [];
+dev.on('pageerror', (e) => devProblems.push(`device page uncaught: ${e.message}`));
+dev.on('console', (m) => { if (m.type() === 'error') devProblems.push(`device page: ${m.text()}`); });
+
+await dev.goto(`http://localhost:${PORT}/`, { waitUntil: 'load' });
+await dev.waitForTimeout(900);
+
+check(await dev.$eval('#ctx', (e) => e.classList.contains('device')),
+  'the page did not notice it was being served by the guitar');
+
+await dev.click('.tab[data-tab=setup]');
+await dev.waitForTimeout(200);
+
+const panel = await dev.evaluate(() => ({
+  rows: document.querySelectorAll('#devStatus table.kv tr').length,
+  hasPush: !!document.querySelector('#devPush'),
+  hasOta: !!document.querySelector('#devOta'),
+  text: document.querySelector('#devStatus')?.textContent || '',
+}));
+check(panel.rows >= 6, `device panel showed ${panel.rows} status rows`);
+check(panel.hasPush && panel.hasOta, 'device panel is missing its controls');
+// Everything below needs the controls to exist. Bail with a readable failure
+// rather than letting Playwright time out waiting for a button that is not
+// coming.
+if (!panel.hasPush) {
+  problems.push('device panel never rendered; skipping the rest of its checks');
+}
+check(/Walk Up/.test(panel.text), 'device panel does not show what is playing');
+check(/104 frames/.test(panel.text), 'device panel does not show the self-test result');
+
+// The push has to produce something the firmware would actually accept, so the
+// fake device keeps the body and it is checked rather than just the status text.
+if (panel.hasPush) {
+await dev.click('#devPush');
+await dev.waitForTimeout(400);
+const pushed = await dev.$eval('#devPushStatus', (e) => ({ text: e.textContent, cls: e.className }));
+check(/good/.test(pushed.cls), `push reported: ${pushed.text}`);
+check(lastEffects !== null, 'pushing sent nothing');
+if (lastEffects) {
+  const sent = JSON.parse(lastEffects);
+  check(Array.isArray(sent.slots) && sent.slots.length === 5,
+    `sent ${sent.slots?.length} slots, expected 5`);
+  check(sent.slots.every((x) => x && typeof x.program === 'string'),
+    'a sent slot carried no program');
+  check(sent.output && typeof sent.output.brightnessCeiling === 'number',
+    'output settings were not sent with the effects');
+}
+}
+
+for (const p of devProblems) problems.push(p);
+pretendDevice = false;
 
 // --- the flasher --------------------------------------------------------------
 //

@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "el_engine.h"
 #include "el_program.h"
 #include "esp_err.h"
 
@@ -44,6 +45,13 @@ int app_render_slot_count(void);
 // guitar keeps playing what it was. Returns false with a reason in `err_out`.
 bool app_render_set_slots(const app_slot_update_t *updates, int count,
                           char *err_out, size_t err_max);
+
+// The output chain's settings: brightness ceiling, gamma, and what the supply
+// is trusted to deliver. Safe to change at any time - none of it touches the
+// pixel layout or the LED driver, which is why these travel with the effects
+// and the geometry does not.
+void app_render_set_output(const el_output_t *output);
+void app_render_get_output(el_output_t *out);
 
 esp_err_t app_render_start(void);
 void app_render_stats(app_render_stats_t *out);

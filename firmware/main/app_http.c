@@ -84,6 +84,18 @@ static esp_err_t get_status(httpd_req_t *req)
     cJSON_AddNumberToObject(render, "slot", fr.slot);
     cJSON_AddStringToObject(render, "effect", fr.effect ? fr.effect : "none");
 
+    // The geometry the device is actually rendering, which the page cannot
+    // change yet. Reported so a difference is visible rather than silent.
+    el_output_t out;
+    app_render_get_output(&out);
+    cJSON *geo = cJSON_AddObjectToObject(root, "geometry");
+    cJSON_AddNumberToObject(geo, "ledsPerStrip", EL_DEFAULT_GEOMETRY.leds_per_strip);
+    cJSON_AddNumberToObject(geo, "frets", EL_DEFAULT_GEOMETRY.frets);
+    cJSON_AddNumberToObject(geo, "scaleLength", EL_DEFAULT_GEOMETRY.scale_length);
+    cJSON_AddNumberToObject(geo, "brightnessCeiling", out.brightness_ceiling);
+    cJSON_AddNumberToObject(geo, "gamma", out.gamma);
+    cJSON_AddNumberToObject(geo, "currentBudget", out.current_budget);
+
     const app_selftest_t *st = app_selftest_get();
     cJSON *self = cJSON_AddObjectToObject(root, "selftest");
     cJSON_AddBoolToObject(self, "ran", st->ran);

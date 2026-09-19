@@ -106,6 +106,19 @@ void app_render_select(int slot)
 
 int app_render_slot_count(void) { return SLOT_COUNT; }
 
+void app_render_set_output(const el_output_t *output)
+{
+    if (!s_engine_lock) return;
+    xSemaphoreTake(s_engine_lock, portMAX_DELAY);
+    el_engine_set_output(&s_engine, output);
+    xSemaphoreGive(s_engine_lock);
+    ESP_LOGI(TAG, "output: ceiling %.2f, gamma %.2f, budget %.0f mA",
+             (double)output->brightness_ceiling, (double)output->gamma,
+             (double)output->current_budget);
+}
+
+void app_render_get_output(el_output_t *out) { *out = s_engine.output; }
+
 bool app_render_set_slots(const app_slot_update_t *updates, int count,
                           char *err_out, size_t err_max)
 {

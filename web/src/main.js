@@ -10,6 +10,7 @@ import {
 import { ledPitch, litSpan, fretDistance } from './model/geometry.js';
 import { NeckView } from './ui/neck.js';
 import { Knob, FiveWay } from './ui/controls.js';
+import { createDevicePanel } from './ui/device.js';
 import { VARS, FUNCS, CONSTANTS } from './lang/ops.js';
 import { compile } from './lang/compile.js';
 import { encodeProgram, toBase64 } from './lang/serialize.js';
@@ -24,6 +25,7 @@ const app = {
   five: null,
   working: {},     // live param values for the selected preset, unsaved
   context: { mode: 'simulator' },
+  device: null,
   editingDefId: null,
 };
 
@@ -41,6 +43,8 @@ function boot() {
     b.addEventListener('click', () => showTab(b.dataset.tab));
   });
 
+  app.device = createDevicePanel($('#device'), app, {});
+
   bindPlay();
   bindEdit();
   buildSetup();
@@ -56,22 +60,32 @@ function boot() {
 }
 
 async function detectContext() {
+  let info = null;
   try {
     const res = await fetch('api/status', { cache: 'no-store' });
     if (res.ok) {
-      const info = await res.json();
-      if (info && info.device === 'electriclight') {
-        app.context = { mode: 'device', info };
-        const el = $('#ctx');
-        el.textContent = info.name || 'guitar';
-        el.classList.add('device');
-        return;
-      }
+      const body = await res.json();
+      if (body && body.device === 'electriclight') info = body;
     }
   } catch {
     /* no device here: Pages, or offline. Simulator it is. */
   }
-  app.context = { mode: 'simulator' };
+
+  if (info) {
+    app.context = { mode: 'device', info };
+    const el = $('#ctx');
+    el.textContent = info.name || 'guitar';
+    el.classList.add('device');
+  } else {
+    app.context = { mode: 'simulator' };
+  }
+
+  // Outside the catch on purpose. Anything thrown while building the device
+  // panel used to be swallowed by the same handler that means "no guitar here",
+  // so the page would quietly fall back to being a simulator while the badge
+  // still said otherwise - which on a phone with no console is indistinguishable
+  // from the guitar being broken.
+  app.device.start();
 }
 
 // --- frame loop --------------------------------------------------------------

@@ -35,6 +35,7 @@ const MODULES = [
   'model/library.js',
   'ui/neck.js',
   'ui/controls.js',
+  'ui/device.js',
   'main.js',
 ];
 

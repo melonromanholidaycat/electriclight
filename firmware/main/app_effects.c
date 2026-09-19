@@ -121,6 +121,35 @@ static esp_err_t apply(const char *json, size_t len, bool persist,
         if (ok) used++;
     }
 
+    // Output settings ride along with the effects because they are the same
+    // kind of thing: a setting the owner changes from the phone. Geometry does
+    // not, because changing the pixel count means re-initialising the LED
+    // driver, and that is not a thing to do halfway through an upload.
+    const cJSON *output = cJSON_GetObjectItem(root, "output");
+    if (ok && cJSON_IsObject(output)) {
+        el_output_t o;
+        app_render_get_output(&o);
+        const struct { const char *key; float *dst; } fields[] = {
+            { "brightnessCeiling", &o.brightness_ceiling },
+            { "gamma", &o.gamma },
+            { "mAPerLed", &o.ma_per_led },
+            { "currentBudget", &o.current_budget },
+            { "idleCurrent", &o.idle_current },
+        };
+        for (size_t i = 0; i < sizeof fields / sizeof fields[0]; i++) {
+            const cJSON *v = cJSON_GetObjectItem(output, fields[i].key);
+            if (cJSON_IsNumber(v)) *fields[i].dst = (float)v->valuedouble;
+        }
+        // Gamma of zero would make the lookup table a step function and a
+        // negative ceiling would wrap; neither is worth trusting a phone about.
+        if (o.gamma < 1.0f) o.gamma = 1.0f;
+        if (o.gamma > 4.0f) o.gamma = 4.0f;
+        if (o.brightness_ceiling < 0.0f) o.brightness_ceiling = 0.0f;
+        if (o.brightness_ceiling > 1.0f) o.brightness_ceiling = 1.0f;
+        if (o.current_budget < 50.0f) o.current_budget = 50.0f;
+        app_render_set_output(&o);
+    }
+
     if (ok) ok = app_render_set_slots(updates, used, err_out, err_max);
     cJSON_Delete(root);
     free(updates);

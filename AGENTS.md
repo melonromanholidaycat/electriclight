@@ -199,7 +199,12 @@ needed for, is [`docs/firmware-plan.md`](docs/firmware-plan.md).
    and the output chain are all in `firmware/components/core`, held to
    `web/test/vectors.json` in CI and compiled into the firmware so the guitar
    can run the same check on itself.
-5. Live control: the page detects it's on-device, pushes and stores effects.
+5. ~~Live control: the page detects it's on-device, pushes and stores effects.~~
+   Done. The neck renders at 60 Hz on its own core, effects arrive over WiFi as
+   compiled bytecode and survive a power cycle, and the page grows a device
+   panel when the guitar is the one serving it. Neck geometry is the one setting
+   that still needs a firmware build, because changing the pixel count means
+   re-initialising the LED driver.
 6. First cabled session. Validate power, wiring and LED behaviour with known-good
    third-party firmware before trusting custom code, then flash all boards.
 7. Effect design, remotely, from then on.
