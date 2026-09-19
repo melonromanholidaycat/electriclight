@@ -19,6 +19,9 @@ figure here and the build fails until the code agrees.
 | `controls-rotary-switch-detail.jpg` | the same from the side |
 | `neck-pocket-wiring.jpg` | where the strips enter the body: three conductors per strip |
 | `gy-61-accelerometer.jpg` | the sensor beside the Nano, silkscreen legible |
+| `battery-holder-loaded.jpg` | six AA cells in the flush-mount holder |
+| `battery-holder-empty.jpg` | the slots and their moulded polarity marks |
+| `battery-holder-contacts.jpg` | the underside: contact tabs and the links between them |
 
 What the close-up settles:
 
@@ -107,11 +110,24 @@ inside what a WS2812B will run on. The strips were fed from the cells directly.
 That also corrects an earlier guess in this file, that the Nano's own on-board
 regulator was feeding them. It was not; nothing was.
 
-4.63 V rules out six cells in series, which would be 0.77 V each — flat past the
-point of working at all, not merely "old". The arithmetic fits **three cells at
-1.54 V each, which is a fresh alkaline**, or four at 1.16 V, which is a
-part-used alkaline or a healthy NiMH. So the pack is very unlikely to be the
-6-series arrangement the brief has always assumed.
+The holder takes six AA cells, and they are TOPCRAFT alkalines. **How they are
+wired is not yet settled.** 4.63 V across six in series is 0.77 V each, which is
+flat past the point of lighting anything — and the guitar was lighting all 52
+pixels minutes earlier, so that does not hold together. Across three in series
+it is 1.54 V each, which is an alkaline with its open-circuit voltage intact,
+and that is exactly what an old cell looks like: the voltage survives, the
+internal resistance climbs, the capacity is gone.
+
+So **two parallel banks of three** is the reading that fits, matching the
+owner's own suspicion. The underside photograph shows at least one added link
+wire, so the holder has been rewired by somebody at some point rather than left
+as bought.
+
+One measurement settles it, with the cells in and the meter on the holder's
+output: **take one cell out.**
+
+- **Reads 0 V** — all six are in series, and the cells really are flat.
+- **Still reads ~4.6 V** — two banks of three, and only one bank was interrupted.
 
 And it finally explains the capped brightness properly. Alkaline cells have an
 internal resistance around 0.15–0.3 Ω each, rising as they deplete. Three in

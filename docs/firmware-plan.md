@@ -318,11 +318,31 @@ Worst case is **every LED at full white: 3.1 A at 5 V**, about 15.6 W, which
 through a buck converter is roughly **2.5 A from a 7.2 V pack**. (LED counts and
 every other measurement: [`hardware/`](hardware/).)
 
-- **Confirm the pack is six cells in series before buying a converter.** The
-  measured 4.63 V suggests the old pack was three or four cells, not six — and a
-  buck converter steps down only. Six NiMH in series gives 7.2 V nominal, 8.4 V
-  charged, 6.0 V empty: always above 5 V, which is exactly what a buck wants. A
-  4.5 V pack would need a boost or buck-boost instead, which is a different part.
+- **Wire the pack as six cells in series, whatever it is now.** The holder takes
+  six; the measured 4.63 V suggests they are currently two parallel banks of
+  three. Both arrangements store the same 14.4 Wh with NiMH in them, so this is
+  not about capacity — it is about current:
+
+  | pack | nominal | converter | current drawn from the pack |
+  |---|---|---|---|
+  | six in series | 7.2 V | buck | 2.5 A |
+  | three in series, twice | 3.6 V | boost | 4.9 A |
+
+  The series pack moves the same energy at half the current, which is a quarter
+  of the resistive loss in the cells, the contacts and the wiring — and those
+  contacts were already flagged as the weak point. It also lets a buck do the
+  work, which is simpler and more efficient than boosting, and it keeps the
+  input comfortably above 5 V at every state of charge: 8.4 V charged, 6.0 V
+  flat.
+
+  There is a second reason with NiMH specifically. Parallel banks of cells
+  cross-charge each other when they drift apart in state of charge, which
+  matters far more for rechargeables than for alkalines. A single series string
+  cannot do that.
+
+  If the holder proves impossible to rewire, a replacement 6×AA holder in the
+  same footprint is the fallback — but check the footprint before buying, since
+  this one is flush-mounted into a routed cavity.
 - Size the buck for the worst case with headroom. A 3 A module is not enough;
   many cheap ones cannot hold 3 A in practice. A synchronous 5 A part is the
   comfortable choice.
