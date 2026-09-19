@@ -605,6 +605,36 @@ does not help the phone, but it turns "borrow a laptop *and* disassemble the
 guitar" into "borrow a laptop". Given how much of this project's design bends
 around scarce cable access, it is the best few euros available.
 
+### The update button cannot install itself
+
+The page is embedded in the firmware. So is the button that installs firmware.
+A board running an image from before that button existed serves a page without
+it, and the only way to get the button is the update it would have performed.
+
+This is not a design flaw so much as a fact about self-hosted control surfaces,
+and it recurs: **any control added to the page is unreachable on every board
+flashed before it.** The escape is always one update performed some other way.
+
+Three ways out, cheapest first:
+
+1. **iOS Shortcuts.** `Get Contents of URL`, method `POST`, request body set to
+   the firmware file from Files, pointed at `http://192.168.4.1/api/ota`. No
+   computer, and it works against any firmware from step 2 onwards because the
+   endpoint is older than the button.
+2. **`curl` from any computer**, which is what the first over-the-air update was
+   done with.
+3. **Reflash over USB** from the web flasher, which needs a computer and a cable
+   but is immune to whatever state the board is in.
+
+**After one such update the loop is broken for good**, because the board is then
+serving a page that can install the next one.
+
+The same reasoning is why `/api/wifi` mattered more than it looked: until the
+page could call it, the only way to reach the instrument was its own access
+point, and a phone on that access point cannot see the internet. Downloading an
+image and installing it were therefore two different networks. Putting the
+guitar on a real network once collapses that back into one.
+
 ### Switch the guitar off before plugging that cable in
 
 The seller's own documentation says it outright: **do not connect USB power and
