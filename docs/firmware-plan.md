@@ -110,22 +110,19 @@ Both strips are separate runs, so:
 | battery sense | 1 | analog, via a divider |
 | microphone (reserved) | 3 | I²S needs BCLK, WS and DATA. Not 2 — PDM needs two but locks you into worse parts |
 
-### It fits the board, but with less room than the reference suggested
+### Digital pins are plentiful; analogue ones are not
 
-Read off the board itself rather than a published pinout — photographs in
-[`hardware/`](hardware/). The board is marked **HW-747 V0.0.2**, and it brings
-out **GPIO1–13** on its two header rows, plus RX/TX, 3V3, GND and 5V. It does
-**not** bring out 14–21 or 33–48. The espboards.dev reference for "ESP32-S3
-Super Mini" claims 32 GPIO across 37 pins; that is a different revision, and an
-earlier version of this plan mapped LED data onto GPIO15 and 16, which simply do
-not exist here.
+Which pins this board has, which of them are free, and which are strapping or
+already spoken for: [`hardware/`](hardware/). What matters here is what that
+list is shaped like.
 
-GPIO3 is a strapping pin and is left alone, leaving **twelve usable**.
+**The constraint is not how many pins there are.** It is that **ADC1 is GPIO1–10
+and nothing else** — the only converter that still works once WiFi is up.
+Everything on the underside pad row is ADC2 or has no ADC at all.
 
-The split that matters: **GPIO1–10 are ADC1**, the only converter that still
-works once WiFi is up. **GPIO11–13 are ADC2 only**, which makes them useless for
-analogue on this device — so they take the digital jobs and leave the scarce
-pins free.
+So that row is a great deal of digital room and **not one extra analogue
+channel.** Anything digital is effectively free; anything analogue still competes
+for ten pins, seven of which are already taken.
 
 | pin | use | why |
 |---|---|---|
@@ -133,18 +130,28 @@ pins free.
 | GPIO1 | potentiometer | ADC1_CH0 |
 | GPIO2 | battery sense | ADC1_CH1 |
 | GPIO4–8 | five-way, one pin per position | digital in, internal pull-ups, common to GND |
-| GPIO9, 10, 11 | spare | two of them ADC1 |
+| GPIO9, 10 | spare, and the only spare ADC1 | the scarce resource |
+| GPIO11 | spare, ADC2 | digital only |
 | GPIO3 | avoid | strapping |
+| GPIO14–18, 21, 33–42, 47 | spare, digital | underside pads; fiddlier to solder |
+| GPIO45, 46 | avoid | strapping |
 
-Nine of twelve, three spare. **Do not use the B+/B− pads on the underside** —
-they are a single-cell LiPo charger input, not somewhere to attach the pack. The
-converter's 5 V goes to the 5V pin.
+**Two spare ADC1 channels, and roughly twenty spare digital pins.** That
+asymmetry is the whole story of the next section.
 
-**GPIO48 carries an on-board WS2812**, not on any header. That is worth more
-than it looks: the effect evaluator and the LED driver can both be brought up
-and checked against the golden vectors on a bare board, one pixel at a time,
-with no guitar, no strips and no cabled session. It turns a chunk of step 4 from
-something that has to wait for hardware into something that does not.
+**Do not use the B+/B− pads on the underside** — they are a single-cell LiPo
+charger input, not somewhere to attach the pack. The converter's 5 V goes to the
+5V pin.
+
+**GPIO48 carries an on-board RGB WS2812.** It appears on the underside row, so
+it is reachable, but it already has a job. That LED is worth more than it looks:
+the effect evaluator and the LED driver can both be brought up and checked
+against the golden vectors on a bare board, one pixel at a time, with no guitar,
+no strips and no cabled session. It turns a chunk of step 4 from something that
+has to wait for hardware into something that does not.
+
+(GPIO43 and 44 are the UART0 pins, and are the `TX` and `RX` on the front header
+rather than part of the underside row.)
 
 Native USB, no serial-converter chip, so flashing needs nothing but a USB-C
 cable — which also makes the pigtail-into-the-cavity insurance below cheaper: it
@@ -156,18 +163,25 @@ There is a **GY-61 already in the guitar**, taped beside the Nano. It is an
 ADXL335 — a three-axis *analogue accelerometer*, not the gyroscope it has been
 called. It is deferred and not to be built on now.
 
-It is an expensive part to keep, because its three analogue outputs land on the
-scarcest resource here: **ADC1 has only seven safe pins, and the pot and battery
-sense already take two.**
+It is an expensive part to keep, and the underside pad row does not make it any
+cheaper. Its three outputs are **analogue**, and every pin that row added is
+ADC2 or no-ADC. The scarce resource is untouched: **ADC1 is ten pins, the pot
+and battery sense take two, and the five-way currently occupies five more.**
 
-| configuration | total pins, of 12 | verdict |
-|---|---|---|
-| base — strips, pot, battery, five-way | 9 | 3 spare |
-| plus the GY-61 (three analogue) | 12 | exactly full |
-| plus a microphone (I²S, three digital) instead | 12 | exactly full |
-| both | 15 | **over by three** |
-| both, five-way as a resistor ladder | 11 | 1 spare |
-| both, a 6-axis I²C part and the ladder | 10 | 2 spare |
+Counting only what each option actually competes for:
+
+| configuration | ADC1 used, of 10 | digital used | verdict |
+|---|---|---|---|
+| base — strips, pot, battery, five-way | 7 | 2 | fits easily |
+| plus a microphone (I²S, three digital) | 7 | 5 | fits easily |
+| plus a 6-axis I²C IMU (two digital) | 7 | 7 | fits easily |
+| plus the GY-61 (three analogue) | **10** | 2 | full, and GPIO3 is strapping |
+| the GY-61 with the five-way moved to the underside row | 5 | 7 | comfortable |
+
+The row's effect is narrow and worth stating plainly: **every digital option
+became free, and no analogue one did.** A microphone and an IMU together, which
+this plan previously called "over by three", now cost nothing anyone has to
+think about.
 
 **Do not wire the GY-61 during the rebuild.** An earlier revision of this file
 said to connect it on the grounds that it was cheap — that was written believing
@@ -181,16 +195,18 @@ answer, and it wins twice over: a gyroscope lets sensor fusion separate gravity
 from movement, which is the thing the ADXL335 physically cannot do, and it
 occupies two digital pins instead of three analogue ones. Same size, same money.
 
-**Four resistors at the switch turn the five-way into a ladder on one ADC pin**,
-and that remains the escape hatch for the pin budget. It still does not need
-doing speculatively: the crunch only arrives when a second sensor is fitted, and
-fitting one means the guitar is open that same afternoon.
+**The resistor-ladder escape hatch is retired.** Four resistors turning the
+five-way into a ladder on one ADC pin used to be the answer to a pin crunch;
+with the underside row confirmed, moving the five-way's five digital wires to
+those pads is strictly better. It frees the same five ADC1 channels, needs no
+resistors, adds no ADC sampling and no ambiguity between adjacent positions, and
+leaves the switch behaving exactly as it does now. The only cost is soldering to
+pads rather than header pins.
 
-**GPIO48 carries an on-board WS2812.** That is worth more than it looks: the
-effect evaluator and the LED driver can both be brought up and checked against
-the golden vectors on a bare board, one pixel at a time, with no guitar, no
-strips and no cable session. It turns a chunk of step 4 from something that has
-to wait for hardware into something that does not.
+It still does not need doing speculatively. The current map stays on the outer
+header because it is easier to solder and nothing needs those ADC1 channels; the
+crunch only arrives if the GY-61 is ever wired, and that means the guitar is
+open that same afternoon.
 
 Native USB, no serial-converter chip, so flashing needs nothing but a USB-C
 cable — which also makes the pigtail-into-the-cavity insurance below cheaper: it

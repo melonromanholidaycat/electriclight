@@ -110,20 +110,36 @@ whose silkscreen reads `CV3`.
 SRAM. The firmware does not enable PSRAM and does not need it — the whole render
 engine addresses 52 pixels — but it is there if something later does.
 
-### The extra pins, and why the budget may be less tight than written
+### The underside pad row
 
-The seller's pinout shows a **second row of pads on the underside** carrying
-GPIO14–18, 21, and 33–48. The outer row — the one that takes pin headers, and
-the one confirmed on the actual board — is GPIO1–13 plus RX/TX, 3V3, GND and 5V,
-exactly as recorded above.
+**Confirmed against the board in hand.** There is a second row of pads on the
+underside carrying **GPIO14–18, 21 and 33–48**, in addition to the outer header
+row of GPIO1–13 plus RX/TX, 3V3, GND and 5V. An earlier version of this section
+said the board did not bring these out; that was read off the front of the board
+only.
 
-**Unconfirmed.** This comes from seller material, and the reason this section
-exists at all is that a published pinout for this board name was already wrong
-once. Nothing should be designed around it until someone looks at the underside
-of the board in hand and counts. It is recorded because it would change a
-conclusion drawn elsewhere: the pin budget in
-[`../firmware-plan.md`](../firmware-plan.md) treats spare pins as scarce, and
-the two deferred sensors were partly deferred on those grounds.
+Two details that corroborate the seller's diagram rather than contradicting it:
+GPIO19 and 20 are **absent** from the row, which is correct — they are the
+native USB data lines this board flashes through. And GPIO33–37 are present and
+usable here because the module is an `ESP32-S3FH4R2`, which has *quad* PSRAM; on
+an octal-PSRAM part those pins are consumed by the memory bus. This firmware
+does not enable PSRAM at all, so the question does not arise.
+
+Which of the new pins are actually free to use:
+
+| pins | usable | note |
+|---|---|---|
+| 14–18, 21, 33–38, 47 | yes | plain digital |
+| 39–42 | yes | these are the JTAG pins; nothing here uses JTAG |
+| 45, 46 | avoid | strapping pins, sampled at reset |
+| 48 | taken | the on-board RGB LED |
+| 19, 20 | not present | native USB |
+
+**None of them is ADC1.** GPIO14–18 are ADC2, which stops working once WiFi is
+up, and 21 and 33–48 have no ADC at all. So the row is a large amount of
+*digital* room and not one more analogue channel — which is the distinction that
+decides what it does and does not unlock. See the pin budget in
+[`../firmware-plan.md`](../firmware-plan.md).
 
 It changes nothing about the pin map in use. GPIO12 and 13 carry LED data
 because they are ADC2-only and therefore useless for analogue once WiFi is up,

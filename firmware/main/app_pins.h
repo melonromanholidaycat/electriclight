@@ -8,10 +8,10 @@
 // header rows, plus RX/TX, 3V3, GND and 5V. GPIO3 is a strapping pin and is
 // left alone, leaving twelve usable.
 //
-// The seller's pinout shows a second row of pads on the underside carrying
-// GPIO14-18, 21 and 33-48. Unconfirmed on the board in hand, and deliberately
-// not designed around: a published pinout for this board name was already wrong
-// once. See docs/hardware/. It would not change the choices below in any case.
+// There is also a second row of pads on the underside carrying GPIO14-18, 21
+// and 33-48, confirmed on the board in hand. None of them is ADC1, so it is a
+// lot of digital room and not one extra analogue channel. See docs/hardware/
+// for which of them are actually free.
 //
 // GPIO1-10 are ADC1, the only converter that keeps working once WiFi is up.
 // GPIO11-13 are ADC2 only, which makes them useless for analogue here - so
@@ -31,12 +31,18 @@
 #define PIN_SWITCH_3     7
 #define PIN_SWITCH_4     8
 
-// Spare: 9, 10 (both ADC1) and 11 (ADC2 only).
-// Avoid: 3, strapping.
+// Spare: 9 and 10, the only remaining ADC1 channels and therefore the ones to
+// spend carefully; 11 (ADC2, digital only); and the underside row.
+// Avoid: 3, 45 and 46 - strapping pins.
+//
+// If a third analogue input is ever needed, the five-way moves to the underside
+// pads and hands back five ADC1 channels. That is the escape hatch; a resistor
+// ladder on the switch was the old one and is no longer worth it.
 // Do not use the B+/B- pads on the underside: those are a single-cell LiPo
 // charger input, not a place to attach the pack. 5 V goes to the 5V pin.
 
-// The on-board WS2812, not on any header. Worth more than it looks: the effect
-// evaluator and the LED driver can be brought up against the golden vectors on
-// a bare board, one pixel at a time, with no guitar and no cabled session.
+// The on-board RGB WS2812, also present on the underside row. Worth more than it
+// looks: the effect evaluator and the LED driver can be brought up against the
+// golden vectors on a bare board, one pixel at a time, with no guitar and no
+// cabled session.
 #define PIN_ONBOARD_LED 48
