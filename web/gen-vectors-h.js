@@ -95,6 +95,7 @@ export function generate() {
   L.push('typedef struct {');
   L.push('    const char *id;');
   L.push('    const uint8_t *program;');
+  L.push('    const char *program_b64; // exactly as the browser encoded it');
   L.push('    uint16_t program_len;');
   L.push('    const float *params;');
   L.push('    uint8_t param_count;');
@@ -133,6 +134,7 @@ export function generate() {
     L.push('    {');
     L.push(`        .id = ${JSON.stringify(c.id)},`);
     L.push(`        .program = EL_VEC_PROG_${i}, .program_len = ${fromBase64(c.program).length},`);
+    L.push(`        .program_b64 = ${JSON.stringify(c.program)},`);
     L.push(`        .params = ${c.params.length ? `EL_VEC_PARAMS_${i}` : 'NULL'}, .param_count = ${c.params.length},`);
     L.push(`        .knob = ${f32(c.knob)}, .sw = ${f32(c.sw)},`);
     L.push(`        .frames = EL_VEC_FRAMES_${i}, .frame_count = ${c.frames.length},`);

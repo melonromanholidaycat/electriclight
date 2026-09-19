@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "app_config.h"
+#include "app_effects.h"
 #include "app_identity.h"
 #include "app_log.h"
 #include "app_mode.h"
@@ -275,6 +276,99 @@ static esp_err_t get_selftest(httpd_req_t *req)
     return err;
 }
 
+// The effects the guitar is playing. GET returns exactly what was last
+// accepted, so a replacement phone can recover the library from the instrument
+// rather than the other way round.
+static esp_err_t get_effects(httpd_req_t *req)
+{
+    size_t len = 0;
+    const char *stored = app_effects_stored(&len);
+    httpd_resp_set_type(req, "application/json");
+    if (!stored) {
+        // Not an error. It means nobody has sent any, so the built-ins are
+        // playing - and the page needs to be able to tell those apart.
+        return httpd_resp_sendstr(req, "{\"stored\":false}");
+    }
+    return httpd_resp_send(req, stored, (ssize_t)len);
+}
+
+static esp_err_t post_effects(httpd_req_t *req)
+{
+    if (req->content_len <= 0 || req->content_len > APP_EFFECTS_MAX_JSON) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "payload too large");
+        return ESP_FAIL;
+    }
+
+    char *body = malloc((size_t)req->content_len + 1);
+    if (!body) return httpd_resp_send_500(req);
+
+    int got = 0;
+    while (got < req->content_len) {
+        const int n = httpd_req_recv(req, body + got, (size_t)(req->content_len - got));
+        if (n == HTTPD_SOCK_ERR_TIMEOUT) continue;
+        if (n <= 0) {
+            free(body);
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "upload interrupted");
+            return ESP_FAIL;
+        }
+        got += n;
+    }
+    body[got] = '\0';
+
+    char why[128];
+    const esp_err_t err = app_effects_apply(body, (size_t)got, why, sizeof why);
+    free(body);
+
+    if (err != ESP_OK) {
+        // The reason matters more than the status here: it is the only thing
+        // standing between the owner and guessing why an effect would not load.
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_set_status(req, "400 Bad Request");
+        cJSON *root = cJSON_CreateObject();
+        cJSON_AddBoolToObject(root, "ok", false);
+        cJSON_AddStringToObject(root, "error", why);
+        char *json = cJSON_PrintUnformatted(root);
+        cJSON_Delete(root);
+        if (!json) return httpd_resp_send_500(req);
+        esp_err_t sent = httpd_resp_sendstr(req, json);
+        free(json);
+        return sent;
+    }
+
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_sendstr(req, "{\"ok\":true}");
+}
+
+// Auditioning an effect from the phone without touching the five-way.
+static esp_err_t post_slot(httpd_req_t *req)
+{
+    char buf[64];
+    const int len = req->content_len < (int)sizeof buf - 1 ? req->content_len : (int)sizeof buf - 1;
+    int got = 0;
+    while (got < len) {
+        const int n = httpd_req_recv(req, buf + got, (size_t)(len - got));
+        if (n == HTTPD_SOCK_ERR_TIMEOUT) continue;
+        if (n <= 0) return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "interrupted");
+        got += n;
+    }
+    buf[got] = '\0';
+
+    cJSON *root = cJSON_Parse(buf);
+    const cJSON *slot = cJSON_GetObjectItem(root, "slot");
+    if (!cJSON_IsNumber(slot) || slot->valueint < 0 ||
+        slot->valueint >= app_render_slot_count()) {
+        cJSON_Delete(root);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "no such slot");
+        return ESP_FAIL;
+    }
+    const int index = slot->valueint;
+    cJSON_Delete(root);
+
+    app_render_select(index);
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_sendstr(req, "{\"ok\":true}");
+}
+
 static const httpd_uri_t ROUTES[] = {
     { .uri = "/",            .method = HTTP_GET,  .handler = get_index },
     { .uri = "/index.html",  .method = HTTP_GET,  .handler = get_index },
@@ -284,6 +378,9 @@ static const httpd_uri_t ROUTES[] = {
     { .uri = "/api/ota",     .method = HTTP_POST, .handler = post_ota },
     { .uri = "/api/wifi",    .method = HTTP_POST, .handler = post_wifi },
     { .uri = "/api/radio",   .method = HTTP_POST, .handler = post_radio_policy },
+    { .uri = "/api/effects", .method = HTTP_GET,  .handler = get_effects },
+    { .uri = "/api/effects", .method = HTTP_POST, .handler = post_effects },
+    { .uri = "/api/slot",    .method = HTTP_POST, .handler = post_slot },
 };
 
 esp_err_t app_http_start(void)

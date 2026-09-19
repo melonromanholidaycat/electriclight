@@ -27,6 +27,19 @@ const el_vectors_contract_t *el_vectors_contract(void)
 // second, rather than the seconds a whole case takes.
 #define EL_SELFTEST_YIELD_EVERY 16
 
+const uint8_t *el_vectors_program(int index, size_t *len_out)
+{
+    if (index < 0 || index >= EL_VECTORS_CASE_COUNT) return NULL;
+    if (len_out) *len_out = EL_VECTORS[index].program_len;
+    return EL_VECTORS[index].program;
+}
+
+const char *el_vectors_program_b64(int index)
+{
+    if (index < 0 || index >= EL_VECTORS_CASE_COUNT) return NULL;
+    return EL_VECTORS[index].program_b64;
+}
+
 bool el_selftest(el_selftest_result_t *result, el_selftest_yield_fn yield, void *ctx)
 {
     memset(result, 0, sizeof *result);

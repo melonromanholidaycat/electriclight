@@ -1,5 +1,6 @@
 #pragma once
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 // Runs the golden vectors from web/test/vectors.json against this build's
@@ -57,6 +58,12 @@ typedef struct {
 } el_vectors_contract_t;
 
 const el_vectors_contract_t *el_vectors_contract(void);
+
+// One golden program, in each of the two forms it exists in: the bytes, and the
+// base64 the browser sends. Exposed so a test can check that the firmware's
+// decoder inverts the browser's encoder.
+const uint8_t *el_vectors_program(int index, size_t *len_out);
+const char *el_vectors_program_b64(int index);
 
 // Formats a result into a single line for /api/status and the boot log.
 // Always NUL-terminates. Returns the number of characters written.

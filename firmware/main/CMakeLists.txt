@@ -18,6 +18,7 @@ idf_component_register(
         "app_selftest.c"
         "app_leds.c"
         "app_render.c"
+        "app_effects.c"
     INCLUDE_DIRS "."
     EMBED_FILES "www/index.html.gz"
     REQUIRES

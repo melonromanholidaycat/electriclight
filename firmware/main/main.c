@@ -11,6 +11,7 @@
 // can be reached.
 
 #include "app_config.h"
+#include "app_effects.h"
 #include "app_http.h"
 #include "app_identity.h"
 #include "app_inputs.h"
@@ -65,6 +66,8 @@ void app_main(void)
     esp_err_t lit = app_render_start();
     if (lit != ESP_OK) {
         ESP_LOGE(TAG, "the render loop did not start: %s", esp_err_to_name(lit));
+    } else if (app_effects_restore() == ESP_ERR_NOT_FOUND) {
+        ESP_LOGI(TAG, "no stored effects; playing the built-in five");
     }
 
     // Give the network a moment to settle before deciding whether this image

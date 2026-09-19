@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "el_base64.h"
 #include "el_engine.h"
 #include "el_eval.h"
 #include "el_program.h"
@@ -77,6 +78,7 @@ int main(void)
 
     // --- the decoder refuses what it should ----------------------------------
     uint8_t buf[256];
+    uint8_t buf_unused[8];
     int len = build_minimal(buf);
     el_effect_t effect;
 
@@ -130,6 +132,56 @@ int main(void)
     float out[3];
     check(!el_eval(&effect.program, vars, NULL, out),
           "the evaluator also refuses the bytecode the decoder rejected");
+
+    // --- base64 ---------------------------------------------------------------
+    //
+    // The firmware receives every effect as base64 from the browser, so its
+    // decoder has to invert the browser's encoder exactly. The golden vectors
+    // carry both forms of the same programs, which makes that checkable here
+    // rather than by uploading something to a guitar and seeing what happens.
+    {
+        const el_vectors_contract_t *v = el_vectors_contract();
+        uint8_t buf[4096];
+        int checked = 0;
+        for (int i = 0; i < v->case_count; i++) {
+            const char *b64 = el_vectors_program_b64(i);
+            size_t want_len = 0;
+            const uint8_t *want = el_vectors_program(i, &want_len);
+            const int n = el_base64_decode(b64, buf, sizeof buf);
+            if (n != (int)want_len || memcmp(buf, want, want_len) != 0) {
+                failures++;
+                printf("  x case %d: base64 decodes to %d bytes, expected %u\n",
+                       i, n, (unsigned)want_len);
+                break;
+            }
+            checked++;
+        }
+        check(checked == v->case_count, "every golden program survives a base64 round trip");
+    }
+
+    check(el_base64_decode("####", buf_unused, sizeof buf_unused) < 0,
+          "base64 refuses characters outside the alphabet");
+
+    // The last two alphabet entries are the ones a lazy decoder gets wrong, and
+    // '+' happens to appear in none of the golden programs, so they are checked
+    // directly rather than left to chance.
+    {
+        uint8_t two[2];
+        check(el_base64_decode("++", two, sizeof two) == 1 && two[0] == 0xfb,
+              "base64 decodes '+' as 62");
+        check(el_base64_decode("//", two, sizeof two) == 1 && two[0] == 0xff,
+              "base64 decodes '/' as 63");
+    }
+
+    // Refusing is not enough: it has to refuse before writing. A canary past
+    // the stated limit catches an off-by-one that still returns an error.
+    {
+        uint8_t small[8];
+        memset(small, 0xAA, sizeof small);
+        const int n = el_base64_decode("RUxGWA==", small, 2);
+        check(n < 0, "base64 refuses to overflow the output buffer");
+        check(small[2] == 0xAA, "base64 wrote past the buffer it was given");
+    }
 
     // --- the golden vectors ---------------------------------------------------
     el_selftest_result_t r;

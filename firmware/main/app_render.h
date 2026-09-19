@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "el_program.h"
 #include "esp_err.h"
 
 // The frame loop: read the controls, run the effect, push the pixels.
@@ -24,6 +25,25 @@ typedef struct {
     int slot;              // the five-way position being played, 0..4
     const char *effect;    // its name
 } app_render_stats_t;
+
+// One switch position's worth of new effect, as it arrives from the page.
+typedef struct {
+    int index;                              // which of the five
+    char name[32];
+    uint8_t program[EL_MAX_PROGRAM_BYTES];  // ELFX, already base64-decoded
+    size_t program_len;
+    float params[EL_MAX_PARAMS];
+    uint8_t param_count;
+} app_slot_update_t;
+
+// How many switch positions there are. The five-way decides this, not the page.
+int app_render_slot_count(void);
+
+// Replaces the given slots, all or nothing. Every program is decoded and
+// verified first, so a batch with one bad effect in it changes nothing and the
+// guitar keeps playing what it was. Returns false with a reason in `err_out`.
+bool app_render_set_slots(const app_slot_update_t *updates, int count,
+                          char *err_out, size_t err_max);
 
 esp_err_t app_render_start(void);
 void app_render_stats(app_render_stats_t *out);
