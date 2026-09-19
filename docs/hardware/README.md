@@ -152,6 +152,11 @@ where every variant of this board puts it. It was measured rather than assumed
 because the potentiometer's top end connects to it, and the ESP32's analogue
 inputs are not 5 V tolerant.
 
+**The control cavity is not shielded.** Checked: no conductive paint, no foil.
+That matters because the only radio in the instrument ends up inside it — see
+[`../firmware-plan.md`](../firmware-plan.md) for what would have had to change
+if it were.
+
 ## The controls, as found
 
 Confirmed by opening the guitar. **All 52 LEDs were verified working on the

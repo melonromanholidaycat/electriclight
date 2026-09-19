@@ -37,6 +37,12 @@ phone via a mobile git client.
 but each one depends on borrowing hardware at an unknown date. Design so that one
 is enough, and so that a mistake costs a delay rather than the project.
 
+**Prefer the easy solder joint.** The board's outer header rows take pin headers;
+its underside pads do not, and are fiddly by hand. Treat the underside as a last
+resort and design around the outer header first. The old wiring already failed
+at its joints, so this is not fussiness — a design that needs twenty delicate
+joints is a design that will have a cold one somewhere.
+
 **The guiding rule:** anything that can't be changed over WiFi is effectively
 permanent. Check every proposal against that.
 

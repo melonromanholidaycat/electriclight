@@ -133,11 +133,13 @@ for ten pins, seven of which are already taken.
 | GPIO9, 10 | spare, and the only spare ADC1 | the scarce resource |
 | GPIO11 | spare, ADC2 | digital only |
 | GPIO3 | avoid | strapping |
-| GPIO14–18, 21, 33–42, 47 | spare, digital | underside pads; fiddlier to solder |
+| GPIO14–18, 21, 33–42, 47 | spare, digital | underside pads — **last resort**, fiddly by hand |
 | GPIO45, 46 | avoid | strapping |
 
-**Two spare ADC1 channels, and roughly twenty spare digital pins.** That
-asymmetry is the whole story of the next section.
+**On the outer header, where the easy joints are: three spare pins, two of them
+ADC1.** The underside row adds about twenty more, but the owner's standing
+preference is to stay off it, so the real budget is the smaller number. Both
+facts matter to the next section.
 
 **Do not use the B+/B− pads on the underside** — they are a single-cell LiPo
 charger input, not somewhere to attach the pack. The converter's 5 V goes to the
@@ -195,18 +197,39 @@ answer, and it wins twice over: a gyroscope lets sensor fusion separate gravity
 from movement, which is the thing the ADXL335 physically cannot do, and it
 occupies two digital pins instead of three analogue ones. Same size, same money.
 
-**The resistor-ladder escape hatch is retired.** Four resistors turning the
-five-way into a ladder on one ADC pin used to be the answer to a pin crunch;
-with the underside row confirmed, moving the five-way's five digital wires to
-those pads is strictly better. It frees the same five ADC1 channels, needs no
-resistors, adds no ADC sampling and no ambiguity between adjacent positions, and
-leaves the switch behaving exactly as it does now. The only cost is soldering to
-pads rather than header pins.
+### If the budget ever does bind, in the order to try things
 
-It still does not need doing speculatively. The current map stays on the outer
-header because it is easier to solder and nothing needs those ADC1 channels; the
-crunch only arrives if the GY-61 is ever wired, and that means the guitar is
-open that same afternoon.
+The owner's standing preference is to stay off the underside pads: they take a
+fiddly hand-solder, and the wiring this rebuild replaces already failed at its
+joints. That ranks the options, and it un-ranks one I had put first.
+
+Counting only the outer header, and leaving GPIO3 alone, there are **twelve
+usable pins and nine are taken.** GPIO9, 10 and 11 are free — three digital, two
+of them ADC1.
+
+1. **Fit the right sensor and the crunch never arrives.** A 6-axis I²C IMU costs
+   two digital pins. GPIO9 and 10 take it, and GPIO11 is still spare. This is
+   already the recommendation above for reasons that have nothing to do with
+   pins.
+2. **One sensor of any kind fits.** An I²S microphone costs three digital pins,
+   which is exactly what is free.
+3. **Both sensors is where it binds** — five pins wanted, three free. Then the
+   **resistor ladder comes back**: four resistors at the switch collapse the
+   five-way onto a single ADC pin and hand back four. It also cuts the wires
+   running from the switch to the board from six to two, which is fewer delicate
+   joints, not more. The costs are real but small: ADC sampling, and thresholds
+   that have to separate five levels reliably.
+4. **The underside pads, last.** Moving the five-way there frees the same four
+   pins with no resistors and no thresholds, but it is five hand-soldered pads.
+   Worth it only if the ladder proves unreliable.
+
+An earlier revision of this section called the ladder retired and put the
+underside pads first, on the grounds that they were electrically cleaner. That
+was true and beside the point: a joint that might not hold is worse than a
+threshold that might need tuning, and tuning happens over WiFi.
+
+None of this needs doing speculatively. The crunch only arrives if a second
+sensor is fitted, and fitting one means the guitar is open that same afternoon.
 
 Native USB, no serial-converter chip, so flashing needs nothing but a USB-C
 cable — which also makes the pigtail-into-the-cavity insurance below cheaper: it
@@ -245,13 +268,14 @@ before the guitar is closed:
   control cavity is very often lined with it. That is a Faraday cage with the
   only radio in the instrument inside it.
 
-  So: **check the cavity for shielding paint or foil before mounting anything**,
-  and if it is there, mount the board with its antenna edge pointing at the
-  pickguard opening rather than buried against a painted wall — or scrape a
-  window in the paint behind the antenna. This is cheap while the guitar is
-  open and close to impossible afterwards, and the failure it prevents is the
-  worst one available: an instrument that is unreachable precisely because it is
-  assembled.
+  **Checked, and this cavity is not shielded** — no paint, no foil. The concern
+  is closed. It is written down because the fix was cheap only while the guitar
+  was open: if the cavity is ever shielded later, the board wants its antenna
+  edge pointing at the pickguard opening rather than buried against a painted
+  wall, or a window scraped in the paint behind it.
+
+  Still worth keeping the antenna edge clear of the battery pack and of any
+  wiring run, which costs nothing to do while mounting.
 - **The on-board 3.3 V regulator is small.** The S3 pulls several hundred
   milliamps in bursts while transmitting, which is exactly when a marginal
   supply browns out. The decoupling already planned matters more here.

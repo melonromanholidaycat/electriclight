@@ -35,9 +35,11 @@
 // spend carefully; 11 (ADC2, digital only); and the underside row.
 // Avoid: 3, 45 and 46 - strapping pins.
 //
-// If a third analogue input is ever needed, the five-way moves to the underside
-// pads and hands back five ADC1 channels. That is the escape hatch; a resistor
-// ladder on the switch was the old one and is no longer worth it.
+// Stay on the outer header: the underside pads are a fiddly hand-solder and the
+// wiring this replaces already failed at its joints. If pins ever do run out,
+// the order to try things is in docs/firmware-plan.md - briefly, the right I2C
+// sensor avoids the problem, and a resistor ladder on the five-way is the
+// fallback before anything goes underneath.
 // Do not use the B+/B- pads on the underside: those are a single-cell LiPo
 // charger input, not a place to attach the pack. 5 V goes to the 5V pin.
 
