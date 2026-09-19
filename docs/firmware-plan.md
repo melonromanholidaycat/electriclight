@@ -318,9 +318,16 @@ Worst case is **every LED at full white: 3.1 A at 5 V**, about 15.6 W, which
 through a buck converter is roughly **2.5 A from a 7.2 V pack**. (LED counts and
 every other measurement: [`hardware/`](hardware/).)
 
-- **Wire the pack as six cells in series, whatever it is now.** The holder takes
-  six; the measured 4.63 V suggests they are currently two parallel banks of
-  three. Both arrangements store the same 14.4 Wh with NiMH in them, so this is
+- **Fit a fuse in the pack's positive line — 3 A, or 5 A at the outside.** Six
+  NiMH cells in series will deliver tens of amps into a fault without complaint;
+  they are a low-impedance source in a wooden box with wiring running the length
+  of a neck. This was worth doing anyway, and the near-short described in
+  [`hardware/`](hardware/) makes the case concrete: nothing in the instrument
+  currently limits fault current at all. It costs well under a euro and it is
+  the only part here whose entire job is to fail.
+- **Wire the pack as six cells in series.** The holder is currently two parallel
+  banks of three, achieved by inserting three cells backwards — see
+  [`hardware/`](hardware/) for why that arrangement has to go regardless. Both arrangements store the same 14.4 Wh with NiMH in them, so this is
   not about capacity — it is about current:
 
   | pack | nominal | converter | current drawn from the pack |

@@ -110,24 +110,38 @@ inside what a WS2812B will run on. The strips were fed from the cells directly.
 That also corrects an earlier guess in this file, that the Nano's own on-board
 regulator was feeding them. It was not; nothing was.
 
-The holder takes six AA cells, and they are TOPCRAFT alkalines. **How they are
-wired is not yet settled.** 4.63 V across six in series is 0.77 V each, which is
-flat past the point of lighting anything — and the guitar was lighting all 52
-pixels minutes earlier, so that does not hold together. Across three in series
-it is 1.54 V each, which is an alkaline with its open-circuit voltage intact,
-and that is exactly what an old cell looks like: the voltage survives, the
-internal resistance climbs, the capacity is gone.
+The holder takes six AA cells and is **wired as two parallel banks of three**,
+confirmed by inspection. The way it achieves that is the part worth knowing:
+**three of the cells go in backwards**, against the polarity moulded into the
+holder, with added jumper wires making the two banks. That is why the pack reads
+4.63 V — three cells in series at 1.54 V each, which is an old alkaline with its
+open-circuit voltage intact and its capacity gone.
 
-So **two parallel banks of three** is the reading that fits, matching the
-owner's own suspicion. The underside photograph shows at least one added link
-wire, so the holder has been rewired by somebody at some point rather than left
-as bought.
+### This holder is a booby trap, and it has already sprung once
 
-One measurement settles it, with the cells in and the meter on the holder's
-output: **take one cell out.**
+Insert the cells the way the holder's own markings tell you to, and the jumpers
+put the two banks in **anti-parallel** — 9 V driving a closed loop through six
+cells, with nothing but their own internal resistance to limit it.
 
-- **Reads 0 V** — all six are in series, and the cells really are flat.
-- **Still reads ~4.6 V** — two banks of three, and only one bank was interrupted.
+| cells | Ω per cell | loop | current | heat, inside the pack |
+|---|---|---|---|---|
+| old alkaline | 0.30 | 1.80 Ω | 5 A | 45 W |
+| fresh alkaline | 0.15 | 0.90 Ω | 10 A | 90 W |
+| **NiMH** | 0.04 | 0.24 Ω | **37 A** | **338 W** |
+
+The owner did exactly this while investigating, caught it by the heat, and got
+the cells out in time. With the NiMH cells the rebuild calls for, the same
+mistake would be roughly seven times worse — and NiMH will happily deliver that
+current rather than sagging out of it the way a tired alkaline does.
+
+**Restore the holder to a plain six-in-series string**: remove the jumpers, put
+the original links back, and let the cells go in the way the moulding says. That
+is less work than maintaining the hack, it is what the converter wants anyway,
+and it removes a trap that currently punishes anyone who inserts batteries
+correctly.
+
+The old alkalines should be discarded rather than reused — they have been
+through a partial short, and the rebuild moves to NiMH regardless.
 
 And it finally explains the capped brightness properly. Alkaline cells have an
 internal resistance around 0.15–0.3 Ω each, rising as they deplete. Three in
