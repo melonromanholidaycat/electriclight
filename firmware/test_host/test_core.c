@@ -1,5 +1,5 @@
-// Host tests for firmware/core. Plain C, no framework, no device:
-//   gcc -o /tmp/t firmware/test_host/test_core.c firmware/core/*.c -Ifirmware/core && /tmp/t
+// Host tests for firmware/components/core. Plain C, no framework, no device:
+//   gcc -o /tmp/t firmware/test_host/test_core.c firmware/components/core/*.c -Ifirmware/components/core && /tmp/t
 //
 // These cover the decisions that determine whether a closed guitar can be
 // reached at all, which is exactly the class of bug that is most expensive to

@@ -30,7 +30,7 @@ jobs:
       - name: Firmware core tests, on the host
         run: |
           gcc -Wall -Wextra -Werror -o /tmp/core-tests \
-            firmware/test_host/test_core.c firmware/core/*.c -Ifirmware/core
+            firmware/test_host/test_core.c firmware/components/core/*.c -Ifirmware/components/core
           /tmp/core-tests
       - name: Build the page
         run: node web/build.js

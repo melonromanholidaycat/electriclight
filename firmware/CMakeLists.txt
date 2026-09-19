@@ -6,6 +6,8 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(EXTRA_COMPONENT_DIRS "")
+# firmware/components/core holds the decision logic as plain C with no ESP-IDF
+# in it, so firmware/test_host can compile the same sources natively. ESP-IDF
+# finds components/ on its own; it does not search anywhere else.
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(electriclight)
