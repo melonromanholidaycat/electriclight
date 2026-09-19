@@ -314,8 +314,19 @@ settle, and it looks exactly like a firmware bug. It worked acceptably on the
 Nano because the ATmega's input is more forgiving; do not read that as evidence
 it will work here.
 
-The fix is one component: **100 nF from the ADC pin to GND**, plus multisampling
-in firmware. The capacitor becomes the charge reservoir the converter samples
+**Wire it between the board's 3.3 V rail and ground, with the wiper to GPIO1 —
+never from 5 V.** The pot is a divider, so its top end sets the wiper's maximum,
+and the ESP32's analogue inputs are not 5 V tolerant: a pot fed from 5 V would
+put up to 5 V on an input rated for 3.3, and would do it the first time the knob
+was turned all the way up. Taking the reference from the same rail the converter
+uses also makes the reading ratiometric, so supply droop moves both and the
+brightness does not wander.
+
+On this board that rail is the pin whose silkscreen reads `CV3`; confirm it with
+a meter before soldering, per [`hardware/`](hardware/).
+
+The other fix is one component: **100 nF from the ADC pin to GND**, plus
+multisampling in firmware. The capacitor becomes the charge reservoir the converter samples
 from, and the pot only has to keep it topped up. Worst case is mid-rotation at
 roughly 125 kΩ, giving a time constant near 13 ms — imperceptible on a knob, and
 far better than the alternative.

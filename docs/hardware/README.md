@@ -78,8 +78,13 @@ name describes a revision with far more pins broken out, and following it would
 have put LED data on GPIO15 and 16, which this board does not have.
 
 It is definitely an S3 and not a C3: the underside silkscreen lists GPIO33–48,
-and a C3 stops at 21. A red `CV3` marking on the front edge is a component or
-factory mark, unrelated.
+and a C3 stops at 21. The red `C3` on the front edge is a component designator.
+
+**The pin between GPIO13 and GND reads `CV3` rather than `3V3`.** Its position
+says it is the 3.3 V rail — that is where every variant of this board puts it,
+between the GPIO run and ground — and a silkscreen typo on a board of this price
+is unremarkable. But a pin whose label cannot be read is not one to wire to on
+faith, and this one is needed: see the open questions below.
 
 ## The controls, as found
 
@@ -181,6 +186,11 @@ deliver, and the rebuild asks for considerably more.
 ## Still to check
 
 Nothing should be designed around an assumption where one of these is missing.
+
+- **What the `CV3` pin actually is.** Power the board over USB and measure it
+  against GND: around 3.3 V and it is the 3.3 V rail, as its position suggests.
+  This matters because the potentiometer is a divider and its top end has to
+  come from that rail — see [`../firmware-plan.md`](../firmware-plan.md).
 
 - **How many cells the holder actually takes, and whether it is wired in series
   or as parallel banks.** This decides whether the rebuild needs a buck converter
