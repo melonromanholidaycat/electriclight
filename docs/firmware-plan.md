@@ -108,30 +108,45 @@ Both strips are separate runs, so:
 | battery sense | 1 | analog, via a divider |
 | microphone (reserved) | 3 | I²S needs BCLK, WS and DATA. Not 2 — PDM needs two but locks you into worse parts |
 
-### It fits the small board, with room over
+### It fits the board, but with less room than the reference suggested
 
-An ESP32-S3 Super Mini (`ESP32-S3FH4R2`, 22.5 × 18 mm) breaks out thirteen GPIO
-with no boot or system involvement: **1, 2, 4, 5, 6, 7, 8, 15, 16, 17, 18, 21,
-38**. Seven of those (1–8) are ADC1, which is where the two analog inputs have
-to live.
+Read off the board itself rather than a published pinout — photographs in
+[`hardware/`](hardware/). The board is marked **HW-747 V0.0.2**, and it brings
+out **GPIO1–13** on its two header rows, plus RX/TX, 3V3, GND and 5V. It does
+**not** bring out 14–21 or 33–48. The espboards.dev reference for "ESP32-S3
+Super Mini" claims 32 GPIO across 37 pins; that is a different revision, and an
+earlier version of this plan mapped LED data onto GPIO15 and 16, which simply do
+not exist here.
 
-The five-way turning out to be five conductors rather than a ladder cost four
-pins that were not budgeted. Twelve needed, thirteen available — it still
-closes, with one spare:
+GPIO3 is a strapping pin and is left alone, leaving **twelve usable**.
+
+The split that matters: **GPIO1–10 are ADC1**, the only converter that still
+works once WiFi is up. **GPIO11–13 are ADC2 only**, which makes them useless for
+analogue on this device — so they take the digital jobs and leave the scarce
+pins free.
 
 | pin | use | why |
 |---|---|---|
-| GPIO15 | LED data, bass strip | digital |
-| GPIO16 | LED data, treble strip | digital |
+| GPIO12, 13 | LED data, bass and treble | ADC2-only, so nothing analogue is given up |
 | GPIO1 | potentiometer | ADC1_CH0 |
 | GPIO2 | battery sense | ADC1_CH1 |
-| GPIO4–8 | five-way, one pin per position | digital in, internal pull-ups, switch common to GND |
-| GPIO17, 18, 21 | reserved for the microphone | I²S BCLK / WS / DATA |
-| GPIO38 | spare | |
+| GPIO4–8 | five-way, one pin per position | digital in, internal pull-ups, common to GND |
+| GPIO9, 10, 11 | spare | two of them ADC1 |
+| GPIO3 | avoid | strapping |
 
-Reading the switch as five inputs needs no new components and cannot be
-misread — exactly one input is low at a time, and none-low or several-low is a
-detectable fault rather than a plausible-looking wrong answer.
+Nine of twelve, three spare. **Do not use the B+/B− pads on the underside** —
+they are a single-cell LiPo charger input, not somewhere to attach the pack. The
+converter's 5 V goes to the 5V pin.
+
+**GPIO48 carries an on-board WS2812**, not on any header. That is worth more
+than it looks: the effect evaluator and the LED driver can both be brought up
+and checked against the golden vectors on a bare board, one pixel at a time,
+with no guitar, no strips and no cabled session. It turns a chunk of step 4 from
+something that has to wait for hardware into something that does not.
+
+Native USB, no serial-converter chip, so flashing needs nothing but a USB-C
+cable — which also makes the pigtail-into-the-cavity insurance below cheaper: it
+is a USB-C extension, not a programming header.
 
 ### The two deferred sensors, and where the budget runs out
 
@@ -143,14 +158,14 @@ It is an expensive part to keep, because its three analogue outputs land on the
 scarcest resource here: **ADC1 has only seven safe pins, and the pot and battery
 sense already take two.**
 
-| configuration | total pins | ADC1 of 7 | verdict |
-|---|---|---|---|
-| base — strips, pot, battery, five-way | 9 | 2 | 4 spare |
-| plus the GY-61 (three analogue) | 12 | 5 | 1 spare |
-| plus a microphone (I²S, three digital) | 15 | 5 | **over by two** |
-| both, five-way as a resistor ladder | 11 | 6 | 2 spare |
-| both, with a 6-axis I²C part and the ladder | 10 | 3 | 3 spare |
-| both, with a 6-axis I²C part but five digital | 14 | 2 | **over by one** |
+| configuration | total pins, of 12 | verdict |
+|---|---|---|
+| base — strips, pot, battery, five-way | 9 | 3 spare |
+| plus the GY-61 (three analogue) | 12 | exactly full |
+| plus a microphone (I²S, three digital) instead | 12 | exactly full |
+| both | 15 | **over by three** |
+| both, five-way as a resistor ladder | 11 | 1 spare |
+| both, a 6-axis I²C part and the ladder | 10 | 2 spare |
 
 **Do not wire the GY-61 during the rebuild.** An earlier revision of this file
 said to connect it on the grounds that it was cheap — that was written believing

@@ -22,6 +22,8 @@ figure here and the build fails until the code agrees.
 | `battery-holder-loaded.jpg` | six AA cells in the flush-mount holder |
 | `battery-holder-empty.jpg` | the slots and their moulded polarity marks |
 | `battery-holder-contacts.jpg` | the underside: contact tabs and the links between them |
+| `board-front.jpg` | the ESP32-S3 Super Mini, header labels legible |
+| `board-back.jpg` | its underside: board revision, pin list, B+/B- pads |
 
 What the close-up settles:
 
@@ -175,5 +177,9 @@ Nothing should be designed around an assumption where one of these is missing.
 
 - The exact strip part, if the reel or tape carries a marking. Taken as
   WS2812B-equivalent for now: 5 V, three-wire, individually addressable.
-- Confirmation that the new board's own pinout matches the published one for the
-  ESP32-S3 Super Mini. These generic boards vary between sellers and revisions.
+- **Confirmation of the header pin list read off the photographs**: GPIO1-13
+  along the two edges, plus RX/TX, 3V3, GND and 5V. The published reference for
+  "ESP32-S3 Super Mini" claims 32 GPIO across 37 pins; this board is marked
+  HW-747 V0.0.2 and plainly has fewer. The pin map now follows the board rather
+  than the reference — see [`../firmware-plan.md`](../firmware-plan.md) — so if
+  the reading is wrong, it is wrong in the firmware too.
