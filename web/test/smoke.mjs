@@ -198,10 +198,17 @@ const panel = await dev.evaluate(() => ({
   rows: document.querySelectorAll('#devStatus table.kv tr').length,
   hasPush: !!document.querySelector('#devPush'),
   hasOta: !!document.querySelector('#devOta'),
+  hasJoin: !!document.querySelector('#devJoin'),
+  otaAccept: document.querySelector('#devOtaFile')?.getAttribute('accept'),
   text: document.querySelector('#devStatus')?.textContent || '',
 }));
 check(panel.rows >= 6, `device panel showed ${panel.rows} status rows`);
-check(panel.hasPush && panel.hasOta, 'device panel is missing its controls');
+check(panel.hasPush && panel.hasOta && panel.hasJoin, 'device panel is missing its controls');
+// iOS filters a file picker by type, and .bin maps to no useful UTI - a narrow
+// accept can grey the firmware out entirely on the one device that has to pick
+// it. There is nothing to gain by filtering here.
+check(!panel.otaAccept,
+  `the firmware picker filters by "${panel.otaAccept}", which iOS may honour by showing nothing`);
 // Everything below needs the controls to exist. Bail with a readable failure
 // rather than letting Playwright time out waiting for a button that is not
 // coming.

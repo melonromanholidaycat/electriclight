@@ -147,6 +147,32 @@ export function createDevicePanel(host, app, { onLibraryReplaced }) {
     }
   }
 
+  async function joinNetwork() {
+    const ssid = host.querySelector('#devSsid').value.trim();
+    if (!ssid) { say('devJoinStatus', 'Needs a network name.', 'bad'); return; }
+    say('devJoinStatus', 'Saving and restarting...');
+    try {
+      const res = await fetch('api/wifi', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ssid, password: host.querySelector('#devPass').value }),
+      });
+      if (res.ok) {
+        say('devJoinStatus', `Restarting to join "${ssid}". Its own access point `
+          + 'will disappear; rejoin your normal WiFi and look for the guitar '
+          + 'at electriclight.local.', 'good');
+      } else {
+        say('devJoinStatus', `The guitar refused it (${res.status}).`, 'bad');
+      }
+    } catch (err) {
+      // The restart kills the connection mid-reply, so a network error here is
+      // the expected outcome rather than a failure. Saying otherwise would send
+      // somebody looking for a problem that is not there.
+      say('devJoinStatus', `Sent. If the guitar accepted it, it is restarting `
+        + `to join "${ssid}" now.`, 'good');
+    }
+  }
+
   function render() {
     if (app.context.mode !== 'device') {
       host.innerHTML = `<h3>The guitar</h3>
@@ -167,18 +193,33 @@ export function createDevicePanel(host, app, { onLibraryReplaced }) {
 
       <h3>Firmware</h3>
       <div class="row">
-        <input type="file" id="devOtaFile" accept=".bin">
+        <input type="file" id="devOtaFile">
         <button id="devOta">Install</button>
       </div>
       <p id="devOtaStatus" class="status"></p>
       <p class="note">An interrupted upload is discarded and the guitar keeps
       running what it has. A new image that cannot get back on the network rolls
-      itself back.</p>`;
+      itself back.</p>
+
+      <h3>Network</h3>
+      <div class="row">
+        <input type="text" id="devSsid" placeholder="WiFi name" autocapitalize="off"
+               autocorrect="off" spellcheck="false">
+        <input type="password" id="devPass" placeholder="Password">
+      </div>
+      <div class="row"><button id="devJoin">Join this network</button></div>
+      <p id="devJoinStatus" class="status"></p>
+      <p class="note">Puts the guitar on your own WiFi instead of its own access
+      point, which is worth doing once: after it the phone can reach the guitar
+      and the internet at the same time, so downloading firmware and installing
+      it stop being two different networks. The guitar restarts to join, and
+      falls back to its own access point if it cannot.</p>`;
 
     host.querySelector('#devPush').addEventListener('click', push);
     host.querySelector('#devOta').addEventListener('click', () => {
       installFirmware(host.querySelector('#devOtaFile').files[0]);
     });
+    host.querySelector('#devJoin').addEventListener('click', joinNetwork);
     refresh();
   }
 
