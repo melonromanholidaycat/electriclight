@@ -180,8 +180,9 @@ needed for, is [`docs/firmware-plan.md`](docs/firmware-plan.md).
    browser. Fret spacing follows the real geometry. The brightness knob and
    five-way switch are modelled in the UI, so the standalone playing experience
    is designed rather than retrofitted.
-2. CI pipeline plus a minimal firmware that boots, serves a page and accepts a
-   wireless update. Green in CI before hardware arrives.
+2. ~~CI pipeline plus a minimal firmware that boots, serves a page and accepts a
+   wireless update.~~ Done. Both flash layouts build green in CI, the image is
+   published as an artefact, and OTA rolls back an image that cannot be reached.
 3. The survival features above.
 4. Bring the effect interpreter to the firmware, matching the simulator exactly.
    `web/test/vectors.json` is the contract it must reproduce.

@@ -131,7 +131,8 @@ sense already take two.**
 | plus the GY-61 (three analogue) | 12 | 5 | 1 spare |
 | plus a microphone (I²S, three digital) | 15 | 5 | **over by two** |
 | both, five-way as a resistor ladder | 11 | 6 | 2 spare |
-| both, with a 6-axis I²C part instead of the GY-61 | 10 | 2 | 3 spare |
+| both, with a 6-axis I²C part and the ladder | 10 | 3 | 3 spare |
+| both, with a 6-axis I²C part but five digital | 14 | 2 | **over by one** |
 
 **Do not wire the GY-61 during the rebuild.** An earlier revision of this file
 said to connect it on the grounds that it was cheap — that was written believing
@@ -389,8 +390,22 @@ Worst case is **every LED at full white: 3.1 A at 5 V**, about 15.6 W, which
 through a buck converter is roughly **2.5 A from a 7.2 V pack**. (LED counts and
 every other measurement: [`hardware/`](hardware/).)
 
-- **Fit a fuse in the pack's positive line — 3 A, or 5 A at the outside.** Six
-  NiMH cells in series will deliver tens of amps into a fault without complaint;
+- **Fit a 5 A fuse in the pack's positive line.** Not 3 A, which an earlier
+  revision of this file called for: the converter draws its *most* current from
+  the pack when the pack is *flattest*, because it takes the same power from a
+  lower voltage. At 6.0 V that is 2.95 A — close enough to a 3 A fuse to blow it
+  eventually, and it would blow on stage at high brightness on a tired pack,
+  which is both the worst moment and the hardest fault to diagnose.
+
+  | pack | drawn from the pack |
+  |---|---|
+  | 8.4 V charged | 2.11 A |
+  | 7.2 V nominal | 2.46 A |
+  | 6.0 V flat | **2.95 A** |
+
+  5 A leaves real headroom over normal operation and still clears a short in
+  milliseconds — a fault through six NiMH cells is tens of amps, not five. Six
+  NiMH cells in series will deliver that without complaint;
   they are a low-impedance source in a wooden box with wiring running the length
   of a neck. This was worth doing anyway, and the near-short described in
   [`hardware/`](hardware/) makes the case concrete: nothing in the instrument

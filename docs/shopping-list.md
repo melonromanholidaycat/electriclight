@@ -42,7 +42,7 @@ costs another part. Reasoning: [firmware-plan, Power](firmware-plan.md).
 | item | qty | spec | why |
 |---|---|---|---|
 | AA NiMH cells | 6, plus spares | low self-discharge | [hardware](hardware/) — alkalines sag, and the old pack proved it |
-| Fuse + inline holder | 1 | **3 A** | nothing limits fault current today; [firmware-plan, Power](firmware-plan.md) |
+| Fuse + inline holder | 1 | **5 A** — not 3 A | nothing limits fault current today, and a flat pack draws 2.95 A; [firmware-plan, Power](firmware-plan.md) |
 | Electrolytic capacitor | 1–2 | 1000 µF, 10 V or better | bulk near the strips |
 | Ceramic capacitors | ~10 | 100 nF | decoupling, plus one on the pot's ADC pin |
 
