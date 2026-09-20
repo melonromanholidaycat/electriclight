@@ -17,6 +17,7 @@ stale.
 | 3 × ESP32-S3 Super Mini | `ESP32-S3FH4R2`, 4 MB. Pinout and why it fits: [firmware-plan](firmware-plan.md) |
 | 10 × SN74AHCT125N, DIP-14 | Level shifter. **AHCT, not AHC** — [firmware-plan](firmware-plan.md) |
 | Multimeter | |
+| Soldering iron, solder, flux | assumed, since the guitar has already been apart |
 
 ## Still to buy
 
@@ -62,7 +63,8 @@ costs another part. Reasoning: [firmware-plan, Power](firmware-plan.md).
 | Resistors | 2 | ~330 Ω | series on each LED data line, damps reflections |
 | Perfboard | 1 small piece | | the DIP-14 and its passives need somewhere to sit |
 | USB-C cable | 1 | **must carry data** | the board has no serial-converter chip, so the cable is the programmer |
-| USB-C extension or panel mount | 1 | | routed into the cavity: turns "borrow a laptop and disassemble the guitar" into "borrow a laptop" |
+| USB-C extension or panel mount | 1 | | routed into the cavity. Insurance now, not workflow: updates go over WiFi, so this is for the day a board will not boot |
+| Foam tape or standoffs | 1 | to mount the board | keep the antenna edge (the red part at the front) clear of metal and the pack — [firmware-plan](firmware-plan.md) |
 
 ## Deliberately not buying
 
