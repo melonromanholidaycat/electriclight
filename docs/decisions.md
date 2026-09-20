@@ -133,13 +133,32 @@ Measured, on hardware rather than estimated: the full golden-vector run takes
 **34 ms on a desktop and 19.9 s on the S3** — 586x, against the ~15x that clock
 speed alone would explain. The rest is the emulation.
 
-Per frame that is **6.9 ms for 52 pixels, about 41% of the 16.7 ms a 60 Hz frame
-allows.** An earlier version of this line called that "well inside" the budget,
-which was written before anyone had run it and is too comfortable a phrase for
-41%. The vector set is deliberately the heaviest thing the evaluator will ever
-be asked to do — it includes a torture case built from the most expensive
-built-ins — so real effects should sit well under it. That is an expectation,
-not a measurement, and step 5 should measure it rather than inherit it. The FPU is still the reason to prefer the S3 over the
+Per frame, **measured on the guitar rendering a real effect: 6.28 ms for 52
+pixels, 37.7% of the 16.7 ms a 60 Hz frame allows.** Reported live as
+`render.avgUs` in `/api/status`.
+
+Two earlier versions of this line were wrong in opposite directions. The first
+called the cost "well inside" the budget, written before anyone had run it. The
+second inferred 6.9 ms from the self-test and expected real effects to sit *well*
+under that. They sit 9% under. The torture case is barely heavier than the
+built-ins, because most of the cost is not the exotic built-ins — it is doing
+anything at all, 52 times, in emulated double precision.
+
+What that implies, taking the strip write as about 780 µs (26 LEDs a side at
+24 bits and 1.25 µs a bit, both strips in parallel — inferred, not separately
+measured):
+
+| | |
+|---|---|
+| per pixel, all in | ~121 µs |
+| one layer, 52 pixels | 6.3 ms, 38% |
+| two layers, 52 pixels | ~11.8 ms, 71% |
+| three layers, 52 pixels | ~17.3 ms, **over budget** |
+| one layer, budget exhausted at | ~138 pixels |
+
+So layering — reserved in the format and unused — has room for exactly one more
+layer, and a longer neck has room to roughly double. Neither is close enough to
+plan around without measuring again. The FPU is still the reason to prefer the S3 over the
 C3; it is just not the whole story.
 
 ## The firmware evaluator is a literal port, not a reimplementation
