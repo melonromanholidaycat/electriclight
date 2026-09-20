@@ -686,6 +686,14 @@ WiFi credentials, the web UI itself — arrives over the air.
   it had never been exercised.
 - **The evaluator reproduces all 104 golden frames on the silicon**, with
   newlib's libm rather than CI's. Step 4's contract, proven where it counts.
+- **It renders, and an effect pushed from the phone appears on the LED.** A
+  frame costs 6.28 ms of the 16.7 ms available; the figure and what it implies
+  are in [`decisions.md`](decisions.md).
+
+Still unconfirmed on hardware: that pushed effects survive a power cycle. The
+code stores them in NVS and reloads them at boot, and nothing has yet watched
+that happen. It costs one power cycle to find out, and assembly involves rather
+a lot of those.
 
 Three things that only a real boot could have told us, all now fixed: the
 self-test never ran on a cable-flashed image, it starved the idle task for
