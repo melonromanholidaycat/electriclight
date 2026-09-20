@@ -538,6 +538,29 @@ only lever on those is amplitude, which means current, which means brightness.
    cavity.** The control cavity holds the antenna, and there is no point solving
    a hum problem by creating an unreachable guitar — see the antenna note above.
 
+### What the old build's symptom already tells us
+
+Recalled rather than measured, so the test below still settles it: **the noise
+changed with whatever the strips were doing.**
+
+That exonerates the data lines. Data traffic is identical every frame no matter
+what is displayed — 52 pixels times 24 bits, at the same rate, whether the neck
+is black or white. Noise that tracks the effect cannot be coming from the data
+line, and is therefore **LED supply current**.
+
+Which means the priority is the power pair and not the data pair: twisting,
+where the bulk capacitor sits, and how much current is drawn at all. The 330 Ω
+data resistors stay in the design because reflections over half a metre are a
+real signal-integrity concern, but they are not a noise fix and should not be
+expected to behave like one.
+
+It does not yet separate the two current paths. Both the loop and a shared
+ground would track the effect, because both are driven by the same modulating
+current. One field test does separate them: **if the noise changes when the neck
+run is moved around, it is magnetic** and twisting is the answer; if it is
+indifferent to where the wire sits, it is conductive and the ground bond is.
+Doing both costs nothing extra.
+
 ### Find out which one it is, before closing up
 
 Plug in, turn the amp up, and listen with the LEDs in three states:
