@@ -451,12 +451,16 @@ test('the flasher does not promise a light nothing drives yet', () => {
   // whether the flash worked. Telling him to look for an LED that no firmware
   // lights would make a good board look like a dead one.
   const page = readFileSync(join(here, '..', 'flasher', 'flash.html'), 'utf8');
-  const firmware = ['main.c', 'app_http.c', 'app_mode.c', 'app_wifi.c', 'app_inputs.c']
+  // Checking that the pin is mentioned is not enough, and this test passed for a
+  // week while the LED stayed dark: app_leds.c named the pin and set up its RMT
+  // channel, and nothing ever asked it to light. What matters is that something
+  // outside the driver calls it every frame.
+  const callers = ['main.c', 'app_render.c', 'app_http.c', 'app_mode.c']
     .map((f) => readFileSync(join(here, '..', '..', 'firmware', 'main', f), 'utf8')).join('');
-  const driven = /PIN_ONBOARD_LED/.test(firmware);
-  const promised = /onboard LED gives it away|LED will light|watch the LED/i.test(page);
+  const driven = /app_leds_onboard\s*\(/.test(callers);
+  const promised = /own RGB LED|onboard LED|watch the LED/i.test(page);
   assert(driven || !promised,
-    'the flasher tells the owner to look at the onboard LED, but no firmware drives it');
+    'the flasher tells the owner to look at the onboard LED, but nothing drives it');
 });
 
 test('the flasher quotes the real access point credentials', () => {

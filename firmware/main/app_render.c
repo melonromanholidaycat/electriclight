@@ -222,6 +222,19 @@ static void render_task(void *arg)
         // millisecond to be holding anything.
         app_leds_write(rgb, s_engine.layout.count);
 
+        // The board's own LED shows one pixel from the middle of the bass
+        // strip. On a bare board on a desk this is the only visible sign the
+        // whole chain works - evaluator, output chain, RMT - and without it a
+        // working board is indistinguishable from a dead one, which is a
+        // mistake this project has already made once.
+        //
+        // Divided down because it sits a hand's width from your face, while the
+        // strips it mirrors are under a guitar neck.
+        if (s_engine.layout.count > 0) {
+            const int middle = (s_engine.layout.count / 2 / 2) * 3;
+            app_leds_onboard(rgb[middle] / 6, rgb[middle + 1] / 6, rgb[middle + 2] / 6);
+        }
+
         const uint32_t took = (uint32_t)(esp_timer_get_time() - started);
         sum_us += took;
         sum_n++;

@@ -150,9 +150,10 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
       should load, with a <span class="badge on">device</span> badge instead of
       <span class="badge">simulator</span>.</li>
   </ol>
-  <p class="small muted">The phone is the only check that means anything today.
-  The board has an addressable LED on GPIO48, but no firmware yet drives it &mdash; a
-  dark board is not a failed flash.</p>
+  <p class="small muted">The board's own RGB LED mirrors one pixel from the middle
+  of the bass strip, so on a bare board it is the quickest sign the whole chain is
+  working. It comes up a few seconds after boot &mdash; and on the first boot of a
+  new build, after the twenty seconds the evaluator self-test takes.</p>
   <p class="small muted">In the log you are looking for
   <span class="mono">fallback access point "electriclight" is up</span> and
   <span class="mono">main: ready</span>. On the first boot of a new build it also
