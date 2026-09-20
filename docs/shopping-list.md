@@ -23,20 +23,26 @@ stale.
 
 ### The one real decision
 
-**Buck converter**, and everything else on this list is cheap by comparison.
+**A 5 V buck-boost converter**, and everything else on this list is cheap by
+comparison.
 
 | requirement | value |
 |---|---|
-| input | 6.0 – 8.4 V (six NiMH, flat to charged) |
+| topology | **buck-boost**, not a plain buck |
+| input | must cover **5 V and below** — a flat pack under load sags to about 4 V |
 | output | 5.0 V |
-| current | **4 A continuous minimum, 5 A preferred** |
-| topology | synchronous, for efficiency and less heat in a closed cavity |
-| **enable pin** | **required** — the push-pull switch drives this rather than carrying the load |
+| current | **3 A is ample** |
+| **enable / shutdown pin** | **required** — the push-pull switch drives this rather than carrying the load |
 
-A 3 A module is not enough, and many cheap ones cannot hold 3 A in practice.
+This reverses an earlier entry that asked for a synchronous 5 A buck. That was
+sized for every LED at full white, which the firmware's current limiter means
+the instrument never reaches — and a plain buck browns out on a flat pack long
+before it reaches its rating anyway, because the input falls below its own
+output. The arithmetic is in [firmware-plan, Power](firmware-plan.md).
+
 Check the physical size against the control cavity before buying. If the only
 module you can find has no enable pin, say so before ordering — the workaround
-costs another part. Reasoning: [firmware-plan, Power](firmware-plan.md).
+is one MOSFET and two resistors, not a different converter.
 
 ### Power
 

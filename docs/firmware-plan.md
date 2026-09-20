@@ -521,9 +521,23 @@ every other measurement: [`hardware/`](hardware/).)
   The series pack moves the same energy at half the current, which is a quarter
   of the resistive loss in the cells, the contacts and the wiring — and those
   contacts were already flagged as the weak point. It also lets a buck do the
-  work, which is simpler and more efficient than boosting, and it keeps the
-  input comfortably above 5 V at every state of charge: 8.4 V charged, 6.0 V
-  flat.
+  work, which is simpler and more efficient than boosting.
+
+  **It does not, however, keep the input comfortably above 5 V at every state of
+  charge, which an earlier version of this line claimed.** That was written by
+  comparing the pack's open-circuit voltage to 5 V and forgetting the 650 mΩ the
+  cells, contacts and wiring add up to. Under load:
+
+  | pack | LED draw | at the converter |
+  |---|---|---|
+  | 8.4 V charged | 3.10 A | 7.02 V |
+  | 7.2 V nominal | 3.10 A | 5.60 V |
+  | 6.0 V flat | 0.31 A | 5.75 V |
+  | 6.0 V flat | 1.50 A | 5.04 V |
+  | 6.0 V flat | 3.10 A | **4.07 V** |
+
+  A buck cannot regulate 5 V out of 4.07 V in. So the bottom-right corner of
+  that table is a brownout, not a dim.
 
   There is a second reason with NiMH specifically. Parallel banks of cells
   cross-charge each other when they drift apart in state of charge, which
@@ -533,9 +547,25 @@ every other measurement: [`hardware/`](hardware/).)
   If the holder proves impossible to rewire, a replacement 6×AA holder in the
   same footprint is the fallback — but check the footprint before buying, since
   this one is flush-mounted into a routed cavity.
-- Size the buck for the worst case with headroom. A 3 A module is not enough;
-  many cheap ones cannot hold 3 A in practice. A synchronous 5 A part is the
-  comfortable choice.
+- **Prefer a buck-boost converter over a plain buck.** A buck-boost regulates
+  5 V from an input above *or* below 5 V, which makes the dropout corner above
+  disappear rather than something to stay clear of. This reverses an earlier
+  recommendation here, which called for a synchronous 5 A buck on the grounds
+  that a 3 A module could not hold 3 A. That reasoning sized the converter for
+  full white, which brings us to the next point.
+
+- **The current budget is the real control, and it is a setting.** The firmware
+  limits every frame to `currentBudget` before it reaches the strips, so full
+  white does not happen unless someone asks for it. A measured effect draws
+  about 310 mA. Full white is 3.1 A and is the number that made this look like a
+  5 A problem; it is not a number the instrument ever has to reach.
+
+  That also means the rating matters less than it looked. **3 A is ample**, and
+  the budget should be set well below what the pack can deliver at its flattest
+  rather than at what the converter can deliver at its best. Around 1000 mA
+  keeps the converter input above 5.3 V even on a flat pack, and it is
+  adjustable over WiFi, so it can be tuned against the real instrument instead
+  of guessed at now.
 - **AA holder spring contacts are a real series resistance at 2.5 A.** So are
   thin wires up the neck. Cheap holders sag noticeably under load, and a sagging
   supply is indistinguishable from a firmware fault when you cannot see a serial
