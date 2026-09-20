@@ -468,6 +468,11 @@ channel, and the pair can be thicker.
 | GND | same as 5 V | carries the same current back |
 | data ×2 | 26–28 AWG | carries no current worth the name |
 
+**Twist the 5 V and ground pair together, tightly, along the whole run.** This
+is the single most effective thing in this document for keeping the LEDs out of
+the pickups, and it costs nothing but a few turns of the wrist. See
+[Keeping the LEDs out of the pickups](#keeping-the-leds-out-of-the-pickups).
+
 Silicone insulation rather than PVC: thinner wall for the same conductor, and far
 more flexible in a routed channel.
 
@@ -480,6 +485,72 @@ relying on the software brightness ceiling to stay there.
 held the wire except the solder, and solder is not a mechanical fixing. A cable
 tie anchored to something solid, or a blob of hot glue over the joint, costs
 nothing at build time and is the difference between this happening again and not.
+
+## Keeping the LEDs out of the pickups
+
+The old build put audible noise into the pickups whenever the LEDs were on. That
+is not a surprise and it is not unfixable, but it has to be designed for rather
+than discovered.
+
+### Why it happens
+
+Three mechanisms, and they want different fixes:
+
+1. **Loop area — magnetic coupling.** If 5 V and ground run up the neck as two
+   separate wires, they enclose a loop roughly the size of the neck, carrying a
+   current that changes with every frame. A pickup is a coil of wire. That is a
+   transformer, badly made, with the LEDs as primary and the pickup as
+   secondary. **This is almost certainly the dominant path in a build that
+   didn't plan for it**, and the one most easily fixed.
+2. **Common impedance — conductive coupling.** If LED current shares any
+   conductor with the audio ground, the voltage dropped along that conductor
+   appears in series with the pickup signal. Amps through milliohms is
+   microvolts, and a pickup puts out millivolts.
+3. **Radiated high frequency** from the converter and the data lines. Mostly
+   above the audio band, so usually the smallest of the three.
+
+Two of the noise *frequencies* are fixed and cannot be designed away. The
+WS2812's internal PWM runs at a few hundred hertz to a couple of kilohertz
+depending on the variant, which is squarely audible, and it runs whenever a
+pixel is at partial brightness. The 60 Hz frame clock is contractual. So the
+only lever on those is amplitude, which means current, which means brightness.
+
+### What to do, in order of how much it buys
+
+1. **Twist the 5 V and ground pair.** Tight, regular twists along the whole run.
+   Adjacent conductors carrying equal and opposite current have almost no net
+   loop, so the field cancels instead of radiating. Free, and it attacks the
+   mechanism rather than the symptom.
+2. **Keep the LED ground off the audio ground entirely.** The LED system is
+   battery powered and floats: there is no reason for the two to meet, and a
+   bond between them is the classic cause of exactly this complaint. Do not tie
+   it to the bridge ground, the pot casings, or the jack sleeve.
+3. **Put the bulk capacitor at the neck end, next to the strips**, not in the
+   control cavity. It then supplies the fast current changes locally and the
+   long run carries something closer to DC — less AC in the loop is less field,
+   wherever the loop happens to be.
+4. **Route the run away from the neck pickup**, and cross it at a right angle if
+   it has to pass. Coupling falls off fast with distance and with angle.
+5. **Turn the brightness down.** Field strength follows current. The ceiling and
+   the current budget are both WiFi-adjustable, so this one can be tuned against
+   the real instrument with an amp on.
+6. **If shielding is needed, shield the pickup cavities, not the control
+   cavity.** The control cavity holds the antenna, and there is no point solving
+   a hum problem by creating an unreachable guitar — see the antenna note above.
+
+### Find out which one it is, before closing up
+
+Plug in, turn the amp up, and listen with the LEDs in three states:
+
+| state | what noise here means |
+|---|---|
+| powered, all LEDs off | not the strips — the converter, or a ground bond |
+| a static effect, nothing animating | WS2812 PWM coupling, or the converter |
+| an animating effect | frame-rate and effect-rate modulation through the loop |
+
+That takes two minutes and tells you which of the fixes above is worth more
+effort. Doing it before the guitar is closed is worth far more than doing it
+after.
 
 ## Power
 
@@ -747,10 +818,13 @@ In order, and the order matters:
 2. Check supply voltage **under load**, not at idle, at the far end of the neck.
 3. Confirm both strips independently, and confirm the data direction — index 0
    is expected at the *last fret*, not the nut.
-4. **Verify OTA works on the bench, before closing the guitar.** An OTA path
+4. **Listen to the pickups with the LEDs off, static, and animating**, before
+   anything is closed. The three-state test above says which noise path is
+   live, and every fix for it is far cheaper with the guitar open.
+5. **Verify OTA works on the bench, before closing the guitar.** An OTA path
    that has never been exercised is not a path.
-5. Verify safe mode entry by its physical gesture, also before closing.
-6. Run `/api/selftest` from the phone once, so the evaluator is known to agree
+6. Verify safe mode entry by its physical gesture, also before closing.
+7. Run `/api/selftest` from the phone once, so the evaluator is known to agree
    with the simulator on this silicon before the instrument is trusted on stage.
 
 ## Host-testable core
