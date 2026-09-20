@@ -44,6 +44,26 @@ Check the physical size against the control cavity before buying. If the only
 module you can find has no enable pin, say so before ordering — the workaround
 is one MOSFET and two resistors, not a different converter.
 
+**Ordered: Pololu S13V30F5.** Fixed 5 V, buck-boost, with a shutdown pin.
+
+Three things to read off its product page rather than take from here, because
+they decide how it gets wired and this file has been wrong about this part of
+the design once already:
+
+- **Which way the enable pin goes.** Pololu's regulators generally pull ENABLE
+  up internally and shut down when it is driven low, which would mean the
+  push-pull switch has to *close to ground* to turn the instrument off. Confirm
+  it before soldering; getting it backwards makes the switch an on-switch.
+- **Output current against input voltage.** A buck-boost delivers less at low
+  input, and low input is exactly our worst case — a flat pack under load. The
+  figure that matters is what it gives at around 5.5 V in, not its headline.
+- **Quiescent draw in shutdown.** Switching on the enable pin means the pack
+  stays connected to the converter's input permanently, so "off" is a sleep
+  current rather than a disconnection. It should be tens of microamps, which is
+  far below NiMH self-discharge and therefore irrelevant — but it is worth
+  knowing that the fuse is now the only thing between a charged pack and a
+  fault, at all times, including in the case.
+
 ### Power
 
 | item | qty | spec | why |
