@@ -25,6 +25,10 @@ typedef struct {
     bool limited;          // whether the current limiter had to pull it back
     int slot;              // the five-way position being played, 0..4
     const char *effect;    // its name
+    // Why the loop is not running, or NULL when it is. Reported over HTTP
+    // because a phone showing "0 frames" says something is wrong and nothing
+    // about what, and the guitar has no console to ask.
+    const char *fault;
 } app_render_stats_t;
 
 // One switch position's worth of new effect, as it arrives from the page.

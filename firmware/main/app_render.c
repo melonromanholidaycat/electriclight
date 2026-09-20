@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "app_config.h"
 #include "app_inputs.h"
 #include "app_leds.h"
 #include "el_engine.h"
@@ -265,30 +264,45 @@ static void render_task(void *arg)
     }
 }
 
+static void fail(const char *why)
+{
+    s_stats.fault = why;
+    ESP_LOGE(TAG, "not rendering: %s", why);
+}
+
 esp_err_t app_render_start(void)
 {
-    const app_config_t *cfg = app_config_get();
-    (void)cfg;
+    s_stats.fault = "starting";
 
     el_geometry_t geometry = EL_DEFAULT_GEOMETRY;
     if (!el_engine_init(&s_engine, &geometry, &EL_DEFAULT_OUTPUT)) {
-        ESP_LOGE(TAG, "geometry will not fit this build");
+        fail("the geometry will not fit this build");
         return ESP_ERR_INVALID_SIZE;
     }
 
     esp_err_t err = app_leds_init(geometry.leds_per_strip);
-    if (err != ESP_OK) return err;
+    if (err != ESP_OK) {
+        fail(err == ESP_ERR_NOT_FOUND
+             ? "no RMT channel was free for the LED strips"
+             : "the LED driver would not start");
+        return err;
+    }
 
     s_engine_lock = xSemaphoreCreateMutex();
-    if (!s_engine_lock) return ESP_ERR_NO_MEM;
+    if (!s_engine_lock) {
+        fail("out of memory");
+        return ESP_ERR_NO_MEM;
+    }
 
     load_defaults();
     apply_slot(0);
 
     if (xTaskCreatePinnedToCore(render_task, "render", RENDER_STACK, NULL,
                                 RENDER_PRIORITY, NULL, RENDER_CORE) != pdPASS) {
+        fail("the render task would not start");
         return ESP_ERR_NO_MEM;
     }
+    s_stats.fault = NULL;
     ESP_LOGI(TAG, "rendering at %d Hz on core %d", EL_FRAME_RATE, RENDER_CORE);
     return ESP_OK;
 }

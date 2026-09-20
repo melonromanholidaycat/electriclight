@@ -45,10 +45,12 @@ static esp_err_t init_strip(strip_t *s, int gpio, int leds)
         .gpio_num = gpio,
         .clk_src = RMT_CLK_SRC_DEFAULT,
         .resolution_hz = RESOLUTION_HZ,
-        // Two blocks per channel. Three channels of this leaves room in the
-        // RMT's shared symbol memory; asking for more risks a channel that
-        // will not allocate, which would show up as a strip that never lights.
-        .mem_block_symbols = 64,
+        // One block. The ESP32-S3 has four TX channels sharing 4 x 48 symbols,
+        // and asking for 64 rounds up to two blocks each - so three channels
+        // wanted six blocks out of four and the third one simply failed to
+        // allocate. 48 symbols is 60 us of buffered line at WS2812 bit rate,
+        // which the driver refills from an interrupt long before it runs dry.
+        .mem_block_symbols = 48,
         .trans_queue_depth = 2,
     };
     esp_err_t err = rmt_new_tx_channel(&ch, &s->channel);
@@ -74,10 +76,18 @@ esp_err_t app_leds_init(int leds_per_strip)
     for (int i = 0; i < EL_STRIP_COUNT; i++) {
         const int leds = (i == EL_STRIP_ONBOARD) ? 1 : leds_per_strip;
         esp_err_t err = init_strip(&s_strips[i], STRIP_PINS[i], leds);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "strip %d on GPIO%d: %s", i, STRIP_PINS[i], esp_err_to_name(err));
-            return err;
+        if (err == ESP_OK) continue;
+
+        ESP_LOGE(TAG, "strip %d on GPIO%d: %s", i, STRIP_PINS[i], esp_err_to_name(err));
+        // The board's own LED is a convenience; the neck is the instrument.
+        // Losing the first to a resource the second needs is a bad trade, and
+        // taking the whole render loop down with it is a worse one - that is
+        // what happened the first time this ran on hardware.
+        if (i == EL_STRIP_ONBOARD) {
+            s_strips[i].channel = NULL;
+            continue;
         }
+        return err;
     }
     s_ready = true;
     ESP_LOGI(TAG, "%d LEDs per strip on GPIO%d and GPIO%d, plus the board's own on GPIO%d",
@@ -136,6 +146,7 @@ esp_err_t app_leds_onboard(uint8_t r, uint8_t g, uint8_t b)
 {
     if (!s_ready) return ESP_ERR_INVALID_STATE;
     strip_t *s = &s_strips[EL_STRIP_ONBOARD];
+    if (!s->channel) return ESP_ERR_NOT_SUPPORTED;
     s->grb[0] = g; s->grb[1] = r; s->grb[2] = b;
     return send(s);
 }
@@ -144,6 +155,7 @@ void app_leds_blank(void)
 {
     if (!s_ready) return;
     for (int i = 0; i < EL_STRIP_COUNT; i++) {
+        if (!s_strips[i].channel) continue;
         memset(s_strips[i].grb, 0, sizeof s_strips[i].grb);
         send(&s_strips[i]);
     }

@@ -83,6 +83,7 @@ static esp_err_t get_status(httpd_req_t *req)
     cJSON_AddBoolToObject(render, "limited", fr.limited);
     cJSON_AddNumberToObject(render, "slot", fr.slot);
     cJSON_AddStringToObject(render, "effect", fr.effect ? fr.effect : "none");
+    if (fr.fault) cJSON_AddStringToObject(render, "fault", fr.fault);
 
     // The geometry the device is actually rendering, which the page cannot
     // change yet. Reported so a difference is visible rather than silent.

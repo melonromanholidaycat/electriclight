@@ -48,7 +48,7 @@ function statusHtml(info) {
     ['Playing', `${r.effect || '?'} <span class="dim">(position ${(r.slot ?? 0) + 1})</span>`],
     ['Frame', r.avgUs
       ? `${fmtMs(r.avgUs)} average, ${fmtMs(r.worstUs)} worst &mdash; <strong class="${heavy ? 'bad' : 'good'}">${load}%</strong> of the ${fmtMs(budget)} a frame allows`
-      : 'not rendering'],
+      : `<span class="bad">not rendering${r.fault ? `: ${r.fault}` : ''}</span>`],
     ['Late frames', `${r.late ?? 0} of ${r.frames ?? 0}`],
     ['Draw', `${Math.round(r.currentMa || 0)} mA${r.limited ? ' <strong class="bad">(limited)</strong>' : ''}`],
     ['Evaluator', st.ran
