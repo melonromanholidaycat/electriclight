@@ -40,6 +40,7 @@ docs/             specification, decisions, firmware plan, hardware photographs
 | | authoritative for |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | the brief: constraints that drive every decision. Read first. |
+| [`HANDOFF.md`](HANDOFF.md) | where things stand today, and what is waiting on whom. The one file that is rewritten rather than added to. |
 | [`docs/hardware/`](docs/hardware/) | photographs, and every measured number |
 | [`docs/effect-format.md`](docs/effect-format.md) | what an effect is — the contract the firmware is held to |
 | [`docs/decisions.md`](docs/decisions.md) | why it is that way, what was rejected, and what would reopen it |

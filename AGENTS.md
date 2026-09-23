@@ -205,6 +205,10 @@ needed for, is [`docs/firmware-plan.md`](docs/firmware-plan.md).
    panel when the guitar is the one serving it. Neck geometry is the one setting
    that still needs a firmware build, because changing the pixel count means
    re-initialising the LED driver.
-6. First cabled session. Validate power, wiring and LED behaviour with known-good
-   third-party firmware before trusting custom code, then flash all boards.
+6. Assemble the guitar and validate it. The cabled half of this is done — all
+   three boards are flashed and updates go over WiFi — so what remains needs
+   parts, an iron and a meter, and no computer. Validate power, wiring and LED
+   behaviour with known-good third-party firmware before trusting custom code.
+   The checklist, split into the session that needed a computer and the one that
+   does not, is in [`docs/firmware-plan.md`](docs/firmware-plan.md).
 7. Effect design, remotely, from then on.
