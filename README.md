@@ -35,12 +35,24 @@ firmware/test_host/        those tests, run natively — ./firmware/test_host/ru
 docs/             specification, decisions, firmware plan, hardware photographs
 ```
 
+## Live
+
+| | |
+|---|---|
+| Simulator | https://melonromanholidaycat.github.io/electriclight/ |
+| Flasher — needs desktop Chrome, Edge or Opera | https://melonromanholidaycat.github.io/electriclight/flash.html |
+| Firmware image | https://melonromanholidaycat.github.io/electriclight/firmware/4mb/electriclight.bin |
+| The guitar | `http://192.168.4.1/` on its own access point, or `http://electriclight.local/` once it has joined a network |
+
+The access point is `electriclight`, password `electric-light`, committed on
+purpose — [`docs/decisions.md`](docs/decisions.md).
+
 ## The documents
 
 | | authoritative for |
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | the brief: constraints that drive every decision. Read first. |
-| [`HANDOFF.md`](HANDOFF.md) | where things stand today, and what is waiting on whom. The one file that is rewritten rather than added to. |
+| [`HANDOFF.md`](HANDOFF.md) | where things stand today, and what is waiting on whom |
 | [`docs/hardware/`](docs/hardware/) | photographs, and every measured number |
 | [`docs/effect-format.md`](docs/effect-format.md) | what an effect is — the contract the firmware is held to |
 | [`docs/decisions.md`](docs/decisions.md) | why it is that way, what was rejected, and what would reopen it |
@@ -61,6 +73,11 @@ firmware/test_host/run.sh   # the firmware's C, compiled and run on this machine
 `firmware/test_host/run.sh` needs `node web/build.js` to have run first: the
 golden vectors are generated into C there, and both the host tests and the
 firmware compile them.
+
+All three must pass before anything is called done, and **the exit code of a
+pipeline is the last command's** — a commit once went out with a red test
+because the run was piped through `tail`. The firmware cannot be compiled here;
+the ESP-IDF build in CI is the only check on it.
 
 The smoke test needs Chromium:
 
