@@ -92,11 +92,17 @@ the design once already:
 | USB-C extension or panel mount | 1 | | routed into the cavity. Insurance now, not workflow: updates go over WiFi, so this is for the day a board will not boot |
 | Foam tape or standoffs | 1 | to mount the board | keep the antenna edge (the red part at the front) clear of metal and the pack — [firmware-plan](firmware-plan.md) |
 
+### Guitar audio (separate from the LEDs)
+
+| item | qty | spec | why |
+|---|---|---|---|
+| Volume potentiometer | 1 | **B250K**, matching shaft, mounting size and lug layout | Replace the broken guitar audio volume control; separate from the A500K LED brightness/power pot |
+
 ## Deliberately not buying
 
 | | why |
 |---|---|
-| A replacement potentiometer | the A500K push-pull is the instrument's power switch. One 100 nF capacitor fixes the impedance — [firmware-plan](firmware-plan.md) |
+| A replacement LED brightness/power potentiometer | the existing A500K push-pull stays; one 100 nF capacitor fixes its ADC impedance — [firmware-plan](firmware-plan.md) |
 | A replacement battery holder | the existing one is restored to six-in-series. Only if rewiring proves impossible, and measure the routed cavity first |
 | LED strip | all 52 pixels verified working before teardown |
 | A microphone | deferred, and not committed to |
