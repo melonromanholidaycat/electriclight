@@ -603,9 +603,10 @@ every other measurement: [`hardware/`](hardware/).)
   [`hardware/`](hardware/) makes the case concrete: nothing in the instrument
   currently limits fault current at all. It costs well under a euro and it is
   the only part here whose entire job is to fail.
-- **Wire the pack as six cells in series.** The holder is currently two parallel
-  banks of three, achieved by inserting three cells backwards — see
-  [`hardware/`](hardware/) for why that arrangement has to go regardless. Both arrangements store the same 14.4 Wh with NiMH in them, so this is
+- **The pack has been restored to six cells in series**, per the owner's
+  September 26 report. The holder previously had two parallel banks of three,
+  achieved by inserting three cells backwards — see [`hardware/`](hardware/)
+  for the history and the remaining meter check. Both arrangements store the same 14.4 Wh with NiMH in them, so this is
   not about capacity — it is about current:
 
   | pack | nominal | converter | current drawn from the pack |
@@ -639,9 +640,9 @@ every other measurement: [`hardware/`](hardware/).)
   matters far more for rechargeables than for alkalines. A single series string
   cannot do that.
 
-  If the holder proves impossible to rewire, a replacement 6×AA holder in the
-  same footprint is the fallback — but check the footprint before buying, since
-  this one is flush-mounted into a routed cavity.
+  If the meter check fails, repair the links with all cells removed or use a
+  replacement 6×AA holder in the same footprint. Check the footprint before
+  buying, since this one is flush-mounted into a routed cavity.
 - **Prefer a buck-boost converter over a plain buck.** A buck-boost regulates
   5 V from an input above *or* below 5 V, which makes the dropout corner above
   disappear rather than something to stay clear of. This reverses an earlier

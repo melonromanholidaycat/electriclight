@@ -200,17 +200,18 @@ inside what a WS2812B will run on. The strips were fed from the cells directly.
 That also corrects an earlier guess in this file, that the Nano's own on-board
 regulator was feeding them. It was not; nothing was.
 
-The holder takes six AA cells and is **wired as two parallel banks of three**,
-confirmed by inspection. The way it achieves that is the part worth knowing:
+Before the September 26 rewire, the holder took six AA cells but was **wired as
+two parallel banks of three**, confirmed by inspection. The way it achieved
+that is the part worth knowing:
 **three of the cells go in backwards**, against the polarity moulded into the
 holder, with added jumper wires making the two banks. That is why the pack reads
 4.63 V — three cells in series at 1.54 V each, which is an old alkaline with its
 open-circuit voltage intact and its capacity gone.
 
-### This holder is a booby trap, and it has already sprung once
+### The old holder wiring was a booby trap, and it sprung once
 
-Insert the cells the way the holder's own markings tell you to, and the jumpers
-put the two banks in **anti-parallel** — 9 V driving a closed loop through six
+With the old jumpers, inserting the cells the way the moulding says put the two
+banks in **anti-parallel** — 9 V driving a closed loop through six
 cells, with nothing but their own internal resistance to limit it.
 
 | cells | Ω per cell | loop | current | heat, inside the pack |
@@ -224,11 +225,12 @@ the cells out in time. With the NiMH cells the rebuild calls for, the same
 mistake would be roughly seven times worse — and NiMH will happily deliver that
 current rather than sagging out of it the way a tired alkaline does.
 
-**Restore the holder to a plain six-in-series string**: remove the jumpers, put
-the original links back, and let the cells go in the way the moulding says. That
-is less work than maintaining the hack, it is what the converter wants anyway,
-and it removes a trap that currently punishes anyone who inserts batteries
-correctly.
+**September 26 update:** the owner reports removing the old jumpers and restoring
+all six cells in series. In the owner's photo, the two output lugs were
+identified as left positive and right negative. Their physical connections and
+pack voltage still need checking with a meter before connecting the converter;
+the side photograph does not show the internal links. With the restored series
+string, cells follow the holder's moulded polarity marks.
 
 The old alkalines should be discarded rather than reused — they have been
 through a partial short, and the rebuild moves to NiMH regardless.
