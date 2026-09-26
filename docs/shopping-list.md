@@ -16,12 +16,16 @@ stale.
 |---|---|
 | 3 × ESP32-S3 Super Mini | `ESP32-S3FH4R2`, 4 MB. Pinout and why it fits: [firmware-plan](firmware-plan.md) |
 | 10 × SN74AHCT125N, DIP-14 | Level shifter. **AHCT, not AHC** — [firmware-plan](firmware-plan.md) |
+| AA NiMH cells | 6; low self-discharge |
+| USB-C data cable | For board recovery |
+| Foam tape / standoffs | To mount the board |
+| Heat shrink | Assorted |
 | Multimeter | |
 | Soldering iron, solder, flux | assumed, since the guitar has already been apart |
 
 ## Still to buy
 
-### The one real decision
+### 5 V converter (selected, still to buy)
 
 **A 5 V buck-boost converter**, and everything else on this list is cheap by
 comparison.
@@ -44,7 +48,7 @@ Check the physical size against the control cavity before buying. If the only
 module you can find has no enable pin, say so before ordering — the workaround
 is one MOSFET and two resistors, not a different converter.
 
-**Ordered: Pololu S13V30F5.** Fixed 5 V, buck-boost, with a shutdown pin.
+**Selected, not yet ordered: Pololu S13V30F5.** Fixed 5 V, buck-boost, with a shutdown pin.
 
 Three things to read off its product page rather than take from here, because
 they decide how it gets wired and this file has been wrong about this part of
@@ -68,7 +72,6 @@ the design once already:
 
 | item | qty | spec | why |
 |---|---|---|---|
-| AA NiMH cells | 6, plus spares | low self-discharge | [hardware](hardware/) — alkalines sag, and the old pack proved it |
 | Fuse + inline holder | 1 | **5 A** — not 3 A | nothing limits fault current today, and a flat pack draws 2.95 A; [firmware-plan, Power](firmware-plan.md) |
 | Electrolytic capacitor | 1–2 | 1000 µF, 10 V or better | bulk near the strips |
 | Ceramic capacitors | ~10 | 100 nF | decoupling, plus one on the pot's ADC pin |
@@ -80,7 +83,6 @@ the design once already:
 | Silicone wire | a few metres | **22 AWG** (20 if it fits) | 5 V and GND up the neck |
 | Silicone wire | a few metres | 26–28 AWG | two data lines, carry no current |
 | JST-XH connector, 6-way | 1 pair + crimps | | neck comes off with four bolts, not a soldering iron |
-| Heat shrink | assorted | | |
 
 ### Small parts
 
@@ -88,9 +90,7 @@ the design once already:
 |---|---|---|---|
 | Resistors | 2 | ~330 Ω | series on each LED data line, damps reflections |
 | Perfboard | 1 small piece | | the DIP-14 and its passives need somewhere to sit |
-| USB-C cable | 1 | **must carry data** | the board has no serial-converter chip, so the cable is the programmer |
 | USB-C extension or panel mount | 1 | | routed into the cavity. Insurance now, not workflow: updates go over WiFi, so this is for the day a board will not boot |
-| Foam tape or standoffs | 1 | to mount the board | keep the antenna edge (the red part at the front) clear of metal and the pack — [firmware-plan](firmware-plan.md) |
 
 ### Guitar audio (separate from the LEDs)
 
