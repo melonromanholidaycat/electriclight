@@ -19,12 +19,14 @@ guitar. Host tests and CI cover software, not solder joints or ADC accuracy.
 
 ## Waiting on the owner
 
-- Install the new 4 MB image over WiFi once its CI build is green, then reload
+- Install the new 4 MB image over WiFi; CI has built and published it, then reload
   the control page. Leave Always enable WiFi on until the physical controls work.
 - Assemble and validate per Session B in the firmware plan. Its obsolete cable
   step has been replaced with the on-device wiring patterns.
-- Restore the battery holder to six-in-series; parts remain as indexed by
-  [`docs/shopping-list.md`](docs/shopping-list.md). Pololu converter checks remain.
+- The owner reports the battery holder restored to six-in-series with the old
+  jumpers removed. Check the two output lugs for correct polarity and pack
+  voltage with a meter before connecting the Pololu converter. Parts remain as
+  indexed by [`docs/shopping-list.md`](docs/shopping-list.md).
 - **Battery monitoring stays disabled until the sensing circuit is fitted and
   meter-checked.** Sense-feed isolation with the ESP32 unpowered is still a
   physical design question; see the firmware plan before wiring GPIO2.
