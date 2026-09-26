@@ -72,24 +72,23 @@ the design once already:
 
 | item | qty | spec | why |
 |---|---|---|---|
-| Fuse + inline holder | 1 | **5 A** — not 3 A | nothing limits fault current today, and a flat pack draws 2.95 A; [firmware-plan, Power](firmware-plan.md) |
-| Electrolytic capacitor | 1–2 | 1000 µF, 10 V or better | bulk near the strips |
-| Ceramic capacitors | ~10 | 100 nF | decoupling, plus one on the pot's ADC pin |
+| Fuse + inline holder | 1 each | **5 A MINI automotive blade fuse, 32 V DC**; matching insulated inline MINI holder rated at least 5 A DC, with 22 AWG or thicker leads | Install in the pack-positive wire close to the holder; [firmware-plan, Power](firmware-plan.md) |
+| Electrolytic capacitor | 1 | **1000 µF, at least 10 V**, polarized radial electrolytic (16 V is fine if it fits) | Across the common 5 V/GND rail near the two strip inputs |
+| Ceramic capacitors | 2 | **100 nF (0.1 µF), X7R, at least 10 V**, through-hole for hand soldering | One at SN74AHCT125N VCC/GND; one from pot wiper/GPIO1 to LED GND |
 
 ### Wiring
 
 | item | qty | spec | why |
 |---|---|---|---|
-| Silicone wire | a few metres | **22 AWG** (20 if it fits) | 5 V and GND up the neck |
-| Silicone wire | a few metres | 26–28 AWG | two data lines, carry no current |
-| JST-XH connector, 6-way | 1 pair + crimps | | neck comes off with four bolts, not a soldering iron |
+| 22 AWG silicone wire | already owned | Use for 5 V, GND **and both data lines**, if it fits the neck channel | No additional 26–28 AWG wire is needed |
+| JST-XH connector, 6-way (optional) | 1 mating pair + contacts | 2.5 mm pitch; confirm contacts match 22 AWG and provide 2 pins each for 5 V/GND | Allows neck removal without desoldering; otherwise solder and strain-relieve the wires |
 
 ### Small parts
 
 | item | qty | spec | why |
 |---|---|---|---|
-| Resistors | 2 | ~330 Ω | series on each LED data line, damps reflections |
-| Perfboard | 1 small piece | | the DIP-14 and its passives need somewhere to sit |
+| Resistors | 2 | **330 Ω, 0.25 W, 5%**, through-hole | One per yellow DI line, ideally near its strip input |
+| Perfboard | 1 small piece | **2.54 mm (0.1 in) hole spacing**, large enough for a DIP-14 and wiring | Mount the SN74AHCT125N and its 100 nF bypass capacitor; a suitable DIP-14 breakout board also works |
 | USB-C extension or panel mount | 1 | | routed into the cavity. Insurance now, not workflow: updates go over WiFi, so this is for the day a board will not boot |
 
 ### Guitar audio (separate from the LEDs)
