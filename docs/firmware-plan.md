@@ -443,8 +443,8 @@ DIP-14 pinout, as standard for a 74x125: pin 1 `1OE`, 2 `1A`, 3 `1Y`, 4 `2OE`,
   a board that is already sharing a supply with several amps of LEDs.
 - 100 nF ceramic directly across pins 14 and 7, as close to the chip as it will
   sit.
-- ~330 Ω in series with each output before it reaches the strip, to damp
-  reflections on the run up the neck.
+- 330 Ω in series with each output, ideally close to the first LED's DI pad,
+  to damp reflections on the run up the neck.
 
 DIP-14 needs something to sit on — perfboard or a small proto board — and takes
 about 19 × 7 mm plus that. Not a problem in a Strat control cavity, but it is
@@ -467,7 +467,7 @@ channel, and the pair can be thicker.
 |---|---|---|
 | 5 V | 22 AWG, 20 AWG if it fits | 3.1 A worst case over ~0.5 m is 0.08 V at 22 AWG, half that at 20 |
 | GND | same as 5 V | carries the same current back |
-| data ×2 | 26–28 AWG | carries no current worth the name |
+| data ×2 | 22 AWG is fine if it fits; 26–28 AWG also works | carries no current worth the name |
 
 **Twist the 5 V and ground pair together, tightly, along the whole run.** This
 is the single most effective thing in this document for keeping the LEDs out of
@@ -477,10 +477,11 @@ the pickups, and it costs nothing but a few turns of the wrist. See
 Silicone insulation rather than PVC: thinner wall for the same conductor, and far
 more flexible in a routed channel.
 
-**Put a connector in the neck pocket.** The neck comes off with four bolts; it
-should not also require a soldering iron. A 6-way JST-XH with the 5 V and ground
-doubled up across two pins each keeps every contact inside its rating without
-relying on the software brightness ceiling to stay there.
+**A connector in the neck pocket is optional.** It lets the neck come off
+without a soldering iron. If fitted, a 6-way JST-XH with 5 V and ground doubled
+up across two pins each stays within the per-contact rating; confirm the chosen
+crimp contacts accept 22 AWG wire. If omitted, solder the four conductors and
+strain-relieve the joints.
 
 **Strain-relieve both ends.** The joints that failed here failed because nothing
 held the wire except the solder, and solder is not a mechanical fixing. A cable
@@ -595,8 +596,8 @@ every other measurement: [`hardware/`](hardware/).)
   | 7.2 V nominal | 2.46 A |
   | 6.0 V flat | **2.95 A** |
 
-  5 A leaves real headroom over normal operation and still clears a short in
-  milliseconds — a fault through six NiMH cells is tens of amps, not five. Six
+  5 A leaves real headroom over normal operation and interrupts a severe short
+  according to the fuse's time-current curve — a fault through six NiMH cells is tens of amps, not five. Six
   NiMH cells in series will deliver that without complaint;
   they are a low-impedance source in a wooden box with wiring running the length
   of a neck. This was worth doing anyway, and the near-short described in
