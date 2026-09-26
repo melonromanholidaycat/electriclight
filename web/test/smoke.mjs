@@ -16,6 +16,7 @@ const TYPES = { '.html': 'text/html', '.json': 'application/json', '.bin': 'appl
 // of the contexts it has to work in rather than only the one Pages serves.
 let pretendDevice = false;
 let lastEffects = null;
+const settingsRequests = [];
 
 const DEVICE_STATUS = {
   device: 'electriclight', name: 'electriclight', version: '0.1.0-test',
@@ -36,6 +37,16 @@ const server = createServer((req, res) => {
   if (pretendDevice && path === '/api/status') {
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify(DEVICE_STATUS));
+    return;
+  }
+  if (pretendDevice && ['/api/battery', '/api/diagnostic', '/api/radio'].includes(path) && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      settingsRequests.push({ path, body: JSON.parse(body) });
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end('{"ok":true}');
+    });
     return;
   }
   if (pretendDevice && path === '/api/effects' && req.method === 'POST') {
@@ -236,6 +247,30 @@ if (lastEffects) {
     'output settings were not sent with the effects');
 }
 }
+
+// Exercise the phone controls through their actual requests, including defaults
+// that must keep an unwired board usable.
+check(!await dev.isChecked('#devBatteryEnabled'), 'battery monitoring enabled on an unconfigured board');
+await dev.fill('#devBatteryRatio', '4.1');
+await dev.fill('#devBatteryDim', '6.8');
+await dev.fill('#devBatteryCutoff', '6.1');
+await dev.check('#devBatteryEnabled');
+await dev.click('#devBatterySave');
+await dev.waitForSelector('#devBatteryStatus.good');
+const batteryRequest = settingsRequests.find((r) => r.path === '/api/battery');
+check(batteryRequest?.body.enabled === true && batteryRequest.body.dividerRatio === 4.1 &&
+  batteryRequest.body.dimVolts === 6.8 && batteryRequest.body.cutoffVolts === 6.1,
+  `battery controls sent wrong settings: ${JSON.stringify(batteryRequest)}`);
+for (const mode of ['1', '2', '3', '4', '5', '0']) {
+  await dev.selectOption('#devDiagnostic', mode);
+  await dev.click('#devTest');
+  await dev.waitForSelector('#devTestStatus.good');
+  check(settingsRequests.at(-1)?.body.mode === Number(mode), `diagnostic mode ${mode} not sent`);
+}
+await dev.uncheck('#devRadioAlways');
+await dev.click('#devRadioSave');
+await dev.waitForSelector('#devRadioStatus.good');
+check(settingsRequests.at(-1)?.body.alwaysOn === false, 'radio policy was not sent');
 
 for (const p of devProblems) problems.push(p);
 pretendDevice = false;

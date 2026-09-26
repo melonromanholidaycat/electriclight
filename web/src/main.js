@@ -465,8 +465,8 @@ const SETUP_FIELDS = [
 
   { group: 'Output', key: 'output.brightnessCeiling', label: 'Brightness ceiling', type: 'range', min: 0, max: 1, step: 0.01 },
   { key: 'output.gamma', label: 'Gamma', type: 'range', min: 1, max: 3, step: 0.05 },
-  { key: 'output.mAPerLed', label: 'mA per LED at full white', type: 'number', step: 1, min: 1, max: 200 },
-  { key: 'output.currentBudget', label: 'Current budget (mA)', type: 'number', step: 10, min: 50, max: 20000 },
+  { key: 'output.mAPerLed', label: 'mA per LED at full white', type: 'number', step: 1, min: 60, max: 200 },
+  { key: 'output.currentBudget', label: 'Current budget (mA)', type: 'number', step: 10, min: 50, max: 1500 },
 ];
 
 function getPath(obj, path) {

@@ -1,10 +1,13 @@
 #include "app_render.h"
 
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "app_inputs.h"
+#include "app_config.h"
+#include "app_mode.h"
 #include "app_leds.h"
 #include "el_engine.h"
 #include "el_program.h"
@@ -42,7 +45,12 @@ typedef struct {
 static el_engine_t s_engine;
 static slot_t s_slots[SLOT_COUNT];
 static int s_slot = 0;
-static int s_requested = 0;
+static int s_requested = -1;
+static el_battery_config_t s_battery;
+static float s_battery_scale = 1.0f;
+static int s_diagnostic;
+static uint32_t s_diagnostic_frame;
+static int64_t s_diagnostic_until;
 
 static app_render_stats_t s_stats;
 static portMUX_TYPE s_lock = portMUX_INITIALIZER_UNLOCKED;
@@ -100,27 +108,53 @@ static void apply_slot(int slot)
 void app_render_select(int slot)
 {
     if (slot < 0 || slot >= SLOT_COUNT) return;
+    if (!s_engine_lock) return;
+    xSemaphoreTake(s_engine_lock, portMAX_DELAY);
     s_requested = slot;
+    xSemaphoreGive(s_engine_lock);
 }
 
 int app_render_slot_count(void) { return SLOT_COUNT; }
 
-void app_render_set_output(const el_output_t *output)
+void app_render_get_output(el_output_t *out)
+{
+    if (!s_engine_lock) { *out = EL_DEFAULT_OUTPUT; return; }
+    xSemaphoreTake(s_engine_lock, portMAX_DELAY);
+    *out = s_engine.output;
+    xSemaphoreGive(s_engine_lock);
+}
+
+void app_render_set_battery(const el_battery_config_t *config)
 {
     if (!s_engine_lock) return;
     xSemaphoreTake(s_engine_lock, portMAX_DELAY);
-    el_engine_set_output(&s_engine, output);
+    s_battery = *config;
+    s_battery_scale = 1.0f;
     xSemaphoreGive(s_engine_lock);
-    ESP_LOGI(TAG, "output: ceiling %.2f, gamma %.2f, budget %.0f mA",
-             (double)output->brightness_ceiling, (double)output->gamma,
-             (double)output->current_budget);
 }
 
-void app_render_get_output(el_output_t *out) { *out = s_engine.output; }
+void app_render_get_battery(el_battery_config_t *config)
+{
+    if (!s_engine_lock) { *config = EL_BATTERY_DEFAULT; return; }
+    xSemaphoreTake(s_engine_lock, portMAX_DELAY);
+    *config = s_battery;
+    xSemaphoreGive(s_engine_lock);
+}
 
-bool app_render_set_slots(const app_slot_update_t *updates, int count,
+void app_render_diagnostic(int mode)
+{
+    if (!s_engine_lock) return;
+    xSemaphoreTake(s_engine_lock, portMAX_DELAY);
+    s_diagnostic = mode;
+    s_diagnostic_frame = 0;
+    s_diagnostic_until = esp_timer_get_time() + 120000000;
+    xSemaphoreGive(s_engine_lock);
+}
+
+bool app_render_set_slots(const app_slot_update_t *updates, int count, const el_output_t *output,
                           char *err_out, size_t err_max)
 {
+    if (output && !el_output_validate(output, err_out, err_max)) return false;
     // Decode everything into scratch first. The render task is running on the
     // other core off these structures, so nothing may be half-written: a batch
     // that fails has to leave the guitar playing exactly what it was.
@@ -179,6 +213,7 @@ bool app_render_set_slots(const app_slot_update_t *updates, int count,
         slot->name = slot->owned_name;
         slot->valid = true;
     }
+    if (output) el_engine_set_output(&s_engine, output);
     // Re-arm whatever is playing, in case it was one of the slots replaced.
     apply_slot(s_slot);
     xSemaphoreGive(s_engine_lock);
@@ -198,6 +233,10 @@ static void render_task(void *arg)
     // whatever that pin happened to settle at - which we already know reads as
     // "the board is broken" to anyone watching.
     bool controls_seen = false;
+    int last_position = -1;
+    int64_t next_battery = 0;
+    float pin_volts = 0;
+    bool battery_valid = false;
 
     for (;;) {
         const int64_t started = esp_timer_get_time();
@@ -208,12 +247,57 @@ static void render_task(void *arg)
         // than treated as a change: the neck should not flicker through four
         // effects while somebody turns the knob to the one they want.
         if (in.position >= 0) controls_seen = true;
+        if (started >= next_battery) {
+            battery_valid = app_inputs_battery(&pin_volts);
+            next_battery = started + 1000000;
+        }
         xSemaphoreTake(s_engine_lock, portMAX_DELAY);
-        if (s_requested != s_slot) apply_slot(s_requested);
-        if (in.position >= 0 && in.position != s_slot) apply_slot(in.position);
+        // Consume a phone request once. A resting physical switch must not
+        // reset the effect clock every frame, nor immediately undo auditioning.
+        if (s_requested >= 0) {
+            apply_slot(s_requested);
+            s_requested = -1;
+        }
+        if (in.position >= 0 && in.position != last_position) {
+            if (in.position != s_slot) apply_slot(in.position);
+            last_position = in.position;
+        }
         s_engine.knob = controls_seen ? in.brightness : 1.0f;
         s_engine.sw = (float)s_slot;
-        const uint8_t *rgb = el_engine_step(&s_engine);
+        const float battery_volts = pin_volts * s_battery.divider_ratio;
+        s_battery_scale = el_battery_scale(&s_battery, battery_valid,
+                                            battery_volts, s_battery_scale);
+        if (s_diagnostic && started >= s_diagnostic_until) s_diagnostic = 0;
+        uint8_t *rgb = s_engine.out8;
+        if (s_diagnostic) {
+            el_diagnostic_frame(rgb, s_engine.geometry.leds_per_strip,
+                                s_diagnostic, s_diagnostic_frame++);
+        } else {
+            el_engine_step(&s_engine);
+        }
+        // Linear scaling after the ordinary output chain. Diagnostic frames
+        // also obey the configured ceiling/budget and the battery cap.
+        float scale = s_battery_scale;
+        if (s_diagnostic) {
+            float sum = 0;
+            for (int i = 0; i < s_engine.layout.count * 3; i++) {
+                rgb[i] = (uint8_t)fminf(rgb[i], floorf(255 * s_engine.output.brightness_ceiling));
+                sum += rgb[i];
+            }
+            float active = sum / 255.0f * s_engine.output.ma_per_led / 3.0f;
+            float room = fmaxf(0, s_engine.output.current_budget -
+                                 s_engine.layout.count * s_engine.output.idle_current);
+            if (active > 0) scale = fminf(scale, room / active);
+        }
+        float sum = 0;
+        for (int i = 0; i < s_engine.layout.count * 3; i++) {
+            rgb[i] = (uint8_t)floorf(rgb[i] * scale);
+            sum += rgb[i];
+        }
+        const float current = sum / 255.0f * s_engine.output.ma_per_led / 3.0f +
+                              s_engine.layout.count * s_engine.output.idle_current;
+        const bool limited = s_engine.limited || scale < 1.0f;
+        const int diagnostic = s_diagnostic;
         xSemaphoreGive(s_engine_lock);
 
         // Outside the lock on purpose. The frame buffer the strips are written
@@ -240,12 +324,17 @@ static void render_task(void *arg)
 
         portENTER_CRITICAL(&s_lock);
         s_stats.frames++;
+        s_stats.effect_frame = s_engine.frame;
         s_stats.last_us = took;
         if (took > s_stats.worst_us) s_stats.worst_us = took;
         if (took > FRAME_US) s_stats.late++;
         s_stats.avg_us = (uint32_t)(sum_us / sum_n);
-        s_stats.current_ma = s_engine.current;
-        s_stats.limited = s_engine.limited;
+        s_stats.current_ma = current;
+        s_stats.battery_volts = battery_volts;
+        s_stats.battery_valid = battery_valid;
+        s_stats.battery_scale = s_battery_scale;
+        s_stats.diagnostic = diagnostic;
+        s_stats.limited = limited;
         s_stats.slot = s_slot;
         s_stats.effect = s_slots[s_slot].valid ? s_slots[s_slot].name : "none";
         portEXIT_CRITICAL(&s_lock);
@@ -294,6 +383,13 @@ esp_err_t app_render_start(void)
         return ESP_ERR_NO_MEM;
     }
 
+    s_battery = el_restore_allowed(app_mode_current())
+        ? app_config_get()->battery : EL_BATTERY_DEFAULT;
+    if (!el_restore_allowed(app_mode_current())) {
+        el_output_t safe = EL_DEFAULT_OUTPUT;
+        safe.brightness_ceiling = 0.05f;
+        el_engine_set_output(&s_engine, &safe);
+    }
     load_defaults();
     apply_slot(0);
 

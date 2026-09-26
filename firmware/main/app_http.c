@@ -56,7 +56,7 @@ static esp_err_t get_status(httpd_req_t *req)
     cJSON_AddStringToObject(root, "idf", desc ? desc->idf_ver : "?");
     cJSON_AddStringToObject(root, "wifi", app_wifi_mode_name());
     cJSON_AddStringToObject(root, "radio", el_radio_name(app_mode_current()));
-    cJSON_AddBoolToObject(root, "safeMode", app_mode_boot() == EL_BOOT_SAFE);
+    cJSON_AddBoolToObject(root, "safeMode", app_mode_current() == EL_RADIO_SAFE);
     cJSON_AddNumberToObject(root, "bootCount", app_mode_boot_count());
     cJSON_AddBoolToObject(root, "radioAlwaysOn", cfg->radio_always_on);
     cJSON_AddStringToObject(root, "ip", ip);
@@ -64,6 +64,7 @@ static esp_err_t get_status(httpd_req_t *req)
     cJSON_AddBoolToObject(root, "pendingVerify", app_ota_pending_verify());
     cJSON_AddNumberToObject(root, "uptime", (double)(esp_timer_get_time() / 1000000));
     cJSON_AddNumberToObject(root, "heap", (double)esp_get_free_heap_size());
+    cJSON_AddBoolToObject(root, "connected", app_wifi_has_ip());
 
     // Whether this firmware's evaluator still reproduces the golden vectors.
     // Cached from boot: re-running it costs a second or two, and /api/status
@@ -74,6 +75,7 @@ static esp_err_t get_status(httpd_req_t *req)
     app_render_stats(&fr);
     cJSON *render = cJSON_AddObjectToObject(root, "render");
     cJSON_AddNumberToObject(render, "frames", fr.frames);
+    cJSON_AddNumberToObject(render, "effectFrame", fr.effect_frame);
     cJSON_AddNumberToObject(render, "late", fr.late);
     cJSON_AddNumberToObject(render, "lastUs", fr.last_us);
     cJSON_AddNumberToObject(render, "worstUs", fr.worst_us);
@@ -82,6 +84,17 @@ static esp_err_t get_status(httpd_req_t *req)
     cJSON_AddNumberToObject(render, "currentMa", fr.current_ma);
     cJSON_AddBoolToObject(render, "limited", fr.limited);
     cJSON_AddNumberToObject(render, "slot", fr.slot);
+    cJSON_AddNumberToObject(render, "diagnostic", fr.diagnostic);
+    el_battery_config_t bc;
+    app_render_get_battery(&bc);
+    cJSON *battery = cJSON_AddObjectToObject(root, "battery");
+    cJSON_AddBoolToObject(battery, "enabled", bc.enabled);
+    cJSON_AddBoolToObject(battery, "valid", fr.battery_valid);
+    cJSON_AddNumberToObject(battery, "volts", fr.battery_volts);
+    cJSON_AddNumberToObject(battery, "scale", fr.battery_scale);
+    cJSON_AddNumberToObject(battery, "dividerRatio", bc.divider_ratio);
+    cJSON_AddNumberToObject(battery, "dimVolts", bc.dim_volts);
+    cJSON_AddNumberToObject(battery, "cutoffVolts", bc.cutoff_volts);
     cJSON_AddStringToObject(render, "effect", fr.effect ? fr.effect : "none");
     if (fr.fault) cJSON_AddStringToObject(render, "fault", fr.fault);
 
@@ -382,7 +395,58 @@ static esp_err_t post_slot(httpd_req_t *req)
     return httpd_resp_sendstr(req, "{\"ok\":true}");
 }
 
+// Explicit opt-in: existing bare boards have no divider. Never infer a pack
+// from a floating input. Both settings and diagnostics are accessible on iOS.
+static esp_err_t post_battery(httpd_req_t *req)
+{
+    char body[256];
+    if (read_body(req, body, sizeof body) != ESP_OK)
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid body");
+    cJSON *root = cJSON_Parse(body);
+    const cJSON *enabled = cJSON_GetObjectItem(root, "enabled");
+    const cJSON *ratio = cJSON_GetObjectItem(root, "dividerRatio");
+    const cJSON *dim = cJSON_GetObjectItem(root, "dimVolts");
+    const cJSON *cutoff = cJSON_GetObjectItem(root, "cutoffVolts");
+    if (!cJSON_IsBool(enabled) || !cJSON_IsNumber(ratio) ||
+        !cJSON_IsNumber(dim) || !cJSON_IsNumber(cutoff)) {
+        cJSON_Delete(root);
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing battery settings");
+    }
+    el_battery_config_t config = {
+        .enabled = cJSON_IsTrue(enabled), .divider_ratio = ratio->valuedouble,
+        .dim_volts = dim->valuedouble, .cutoff_volts = cutoff->valuedouble,
+    };
+    cJSON_Delete(root);
+    if (!el_battery_config_valid(&config))
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+            "ratio 3.5-6; cutoff at least 6V; dim at least 0.2V above cutoff and at most 8V");
+    if (app_config_set_battery(&config) != ESP_OK) return httpd_resp_send_500(req);
+    app_render_set_battery(&config);
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_sendstr(req, "{\"ok\":true}");
+}
+
+static esp_err_t post_diagnostic(httpd_req_t *req)
+{
+    char body[64];
+    if (read_body(req, body, sizeof body) != ESP_OK)
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid body");
+    cJSON *root = cJSON_Parse(body);
+    const cJSON *mode = cJSON_GetObjectItem(root, "mode");
+    if (!cJSON_IsNumber(mode) || mode->valuedouble != mode->valueint ||
+        mode->valueint < 0 || mode->valueint > 5) {
+        cJSON_Delete(root);
+        return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "test mode must be 0 to 5");
+    }
+    app_render_diagnostic(mode->valueint);
+    cJSON_Delete(root);
+    httpd_resp_set_type(req, "application/json");
+    return httpd_resp_sendstr(req, "{\"ok\":true}");
+}
+
 static const httpd_uri_t ROUTES[] = {
+    { .uri = "/api/battery", .method = HTTP_POST, .handler = post_battery },
+    { .uri = "/api/diagnostic", .method = HTTP_POST, .handler = post_diagnostic },
     { .uri = "/",            .method = HTTP_GET,  .handler = get_index },
     { .uri = "/index.html",  .method = HTTP_GET,  .handler = get_index },
     { .uri = "/api/status",  .method = HTTP_GET,  .handler = get_status },

@@ -8,7 +8,7 @@
 # web/test/vectors.json. Generated, not committed - same rule as the embedded
 # page, and for the same reason: one source of truth, compiled into two places.
 idf_component_register(
-    SRCS "el_gesture.c" "el_bootstate.c"
+    SRCS "el_gesture.c" "el_bootstate.c" "el_safety.c"
          "el_eval.c" "el_program.c" "el_base64.c" "el_geometry.c" "el_engine.c" "el_selftest.c"
     INCLUDE_DIRS "."
 )

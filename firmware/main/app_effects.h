@@ -13,11 +13,11 @@
 // firmware build. This module's whole job is to accept that, check it, hand it
 // to the render loop, and put it somewhere it survives a power cycle.
 //
-//   POST /api/effects   { version, geometry, output, slots: [ {name, program, params} ] }
+//   POST /api/effects   { version, output, slots: [ {name, program, params} ] }
 //   GET  /api/effects   the same document back
 //
-// `program` is base64 of an ELFX blob. A slot may be null to leave that switch
-// position as it was.
+// `program` is base64 of an ELFX blob. All five slots must be present.
+// Output settings are validated against the board policy and stored in full.
 
 // Generous against a real payload of two or three kilobytes, and small enough
 // that a malformed upload cannot exhaust the heap.

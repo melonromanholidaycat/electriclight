@@ -34,8 +34,13 @@ esp_err_t app_config_init(void)
     }
     if (err != ESP_OK) return err;
 
+    s_cfg.battery = EL_BATTERY_DEFAULT;
     nvs_handle_t h;
     if (nvs_open(NS, NVS_READONLY, &h) == ESP_OK) {
+        el_battery_config_t saved;
+        size_t size = sizeof saved;
+        if (nvs_get_blob(h, "battery1", &saved, &size) == ESP_OK &&
+            size == sizeof saved && el_battery_config_valid(&saved)) s_cfg.battery = saved;
         load_str(h, "name", s_cfg.name, ELECTRICLIGHT_DEVICE_ID);
         load_str(h, "ssid", s_cfg.sta_ssid, "");
         load_str(h, "pass", s_cfg.sta_pass, "");
@@ -123,5 +128,19 @@ esp_err_t app_config_set_boot_count(uint8_t count)
 {
     esp_err_t err = store_u8("boots", count);
     if (err == ESP_OK) s_cfg.boot_count = count;
+    return err;
+}
+
+
+esp_err_t app_config_set_battery(const el_battery_config_t *config)
+{
+    if (!el_battery_config_valid(config)) return ESP_ERR_INVALID_ARG;
+    nvs_handle_t h;
+    esp_err_t err = nvs_open(NS, NVS_READWRITE, &h);
+    if (err != ESP_OK) return err;
+    err = nvs_set_blob(h, "battery1", config, sizeof *config);
+    if (err == ESP_OK) err = nvs_commit(h);
+    nvs_close(h);
+    if (err == ESP_OK) s_cfg.battery = *config;
     return err;
 }

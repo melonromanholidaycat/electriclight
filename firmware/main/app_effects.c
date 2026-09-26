@@ -1,6 +1,7 @@
 #include "app_effects.h"
 
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -49,7 +50,11 @@ static bool read_slot(const cJSON *slot, int index, app_slot_update_t *out,
         }
         for (int i = 0; i < count; i++) {
             const cJSON *v = cJSON_GetArrayItem(params, i);
-            out->params[i] = cJSON_IsNumber(v) ? (float)v->valuedouble : 0.0f;
+            if (!cJSON_IsNumber(v) || !isfinite(v->valuedouble) || !isfinite((float)v->valuedouble)) {
+                snprintf(err, err_max, "slot %d: parameter %d must be finite", index, i);
+                return false;
+            }
+            out->params[i] = (float)v->valuedouble;
         }
         out->param_count = (uint8_t)count;
     }
@@ -66,14 +71,6 @@ static esp_err_t store(const char *json, size_t len)
     nvs_close(h);
     if (err != ESP_OK) return err;
 
-    char *copy = malloc(len + 1);
-    if (copy) {
-        memcpy(copy, json, len);
-        copy[len] = '\0';
-        free(s_stored);
-        s_stored = copy;
-        s_stored_len = len;
-    }
     return ESP_OK;
 }
 
@@ -104,6 +101,11 @@ static esp_err_t apply(const char *json, size_t len, bool persist,
     // with one bad slot in it must leave the guitar playing what it was playing,
     // not half of what was sent.
     const int count = cJSON_GetArraySize(slots);
+    if (count != app_render_slot_count()) {
+        cJSON_Delete(root);
+        snprintf(err_out, err_max, "send all five slots so the saved state matches playback");
+        return ESP_ERR_INVALID_ARG;
+    }
     app_slot_update_t *updates = calloc((size_t)(count > 0 ? count : 1), sizeof *updates);
     if (!updates) {
         cJSON_Delete(root);
@@ -115,7 +117,11 @@ static esp_err_t apply(const char *json, size_t len, bool persist,
     bool ok = true;
     for (int i = 0; i < count && ok; i++) {
         const cJSON *slot = cJSON_GetArrayItem(slots, i);
-        if (cJSON_IsNull(slot)) continue; // leave this position alone
+        if (cJSON_IsNull(slot)) {
+            snprintf(err_out, err_max, "slot %d is empty; send all five slots", i);
+            ok = false;
+            break;
+        }
         updates[used].index = i;
         ok = read_slot(slot, i, &updates[used], err_out, err_max);
         if (ok) used++;
@@ -126,9 +132,13 @@ static esp_err_t apply(const char *json, size_t len, bool persist,
     // not, because changing the pixel count means re-initialising the LED
     // driver, and that is not a thing to do halfway through an upload.
     const cJSON *output = cJSON_GetObjectItem(root, "output");
+    el_output_t o;
+    app_render_get_output(&o);
+    if (ok && output && !cJSON_IsObject(output)) {
+        snprintf(err_out, err_max, "output must be an object");
+        ok = false;
+    }
     if (ok && cJSON_IsObject(output)) {
-        el_output_t o;
-        app_render_get_output(&o);
         const struct { const char *key; float *dst; } fields[] = {
             { "brightnessCeiling", &o.brightness_ceiling },
             { "gamma", &o.gamma },
@@ -138,41 +148,57 @@ static esp_err_t apply(const char *json, size_t len, bool persist,
         };
         for (size_t i = 0; i < sizeof fields / sizeof fields[0]; i++) {
             const cJSON *v = cJSON_GetObjectItem(output, fields[i].key);
-            if (cJSON_IsNumber(v)) *fields[i].dst = (float)v->valuedouble;
+            if (v && !cJSON_IsNumber(v)) {
+                snprintf(err_out, err_max, "%s must be a number", fields[i].key);
+                ok = false;
+                break;
+            }
+            if (v) *fields[i].dst = (float)v->valuedouble;
         }
-        // Gamma of zero would make the lookup table a step function and a
-        // negative ceiling would wrap; neither is worth trusting a phone about.
-        if (o.gamma < 1.0f) o.gamma = 1.0f;
-        if (o.gamma > 4.0f) o.gamma = 4.0f;
-        if (o.brightness_ceiling < 0.0f) o.brightness_ceiling = 0.0f;
-        if (o.brightness_ceiling > 1.0f) o.brightness_ceiling = 1.0f;
-        if (o.current_budget < 50.0f) o.current_budget = 50.0f;
-        app_render_set_output(&o);
     }
+    if (ok) ok = el_output_validate(&o, err_out, err_max);
 
-    if (ok) ok = app_render_set_slots(updates, used, err_out, err_max);
+    // Store a complete snapshot, including inherited output settings. A reset
+    // must reproduce what was accepted even when a caller omitted a field.
+    cJSON_DeleteItemFromObject(root, "output");
+    cJSON *full = cJSON_AddObjectToObject(root, "output");
+    if (!full ||
+        !cJSON_AddNumberToObject(full, "brightnessCeiling", o.brightness_ceiling) ||
+        !cJSON_AddNumberToObject(full, "gamma", o.gamma) ||
+        !cJSON_AddNumberToObject(full, "mAPerLed", o.ma_per_led) ||
+        !cJSON_AddNumberToObject(full, "currentBudget", o.current_budget) ||
+        !cJSON_AddNumberToObject(full, "idleCurrent", o.idle_current)) {
+        snprintf(err_out, err_max, "out of memory building output snapshot");
+        ok = false;
+    }
+    char *snapshot = ok ? cJSON_PrintUnformatted(root) : NULL;
+    if (ok && (!snapshot || strlen(snapshot) > APP_EFFECTS_MAX_JSON)) {
+        snprintf(err_out, err_max, "cannot allocate a complete saved snapshot");
+        ok = false;
+    }
+    // The renderer validates all bytecode, then swaps output and slots under
+    // one lock. Rejected uploads therefore cannot change brightness or limits.
+    if (ok) ok = app_render_set_slots(updates, used, &o, err_out, err_max);
     cJSON_Delete(root);
     free(updates);
-    if (!ok) return ESP_ERR_INVALID_ARG;
+    if (!ok) { free(snapshot); return ESP_ERR_INVALID_ARG; }
+    json = snapshot;
+    len = strlen(snapshot);
 
     if (!persist) {
         // Restoring what is already in NVS. Writing it straight back would
         // spend a flash erase cycle on every boot storing bytes that are
         // already there.
-        char *copy = malloc(len + 1);
-        if (copy) {
-            memcpy(copy, json, len);
-            copy[len] = '\0';
-            free(s_stored);
-            s_stored = copy;
-            s_stored_len = len;
-        }
+        free(s_stored);
+        s_stored = snapshot;
+        s_stored_len = len;
         ESP_LOGI(TAG, "%d slot(s) restored, %u bytes", used, (unsigned)len);
         return ESP_OK;
     }
 
     const esp_err_t err = store(json, len);
     if (err != ESP_OK) {
+        free(snapshot);
         // The guitar is already playing it; it just will not remember. Worth
         // saying so rather than reporting a success the next boot disproves.
         ESP_LOGE(TAG, "applied but not stored: %s", esp_err_to_name(err));
@@ -181,6 +207,9 @@ static esp_err_t apply(const char *json, size_t len, bool persist,
         return err;
     }
 
+    free(s_stored);
+    s_stored = snapshot;
+    s_stored_len = len;
     ESP_LOGI(TAG, "%d slot(s) updated and stored, %u bytes", used, (unsigned)len);
     return ESP_OK;
 }
