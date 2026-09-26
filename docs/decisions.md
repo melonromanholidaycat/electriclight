@@ -430,3 +430,34 @@ The repository was empty when the first branch was pushed, so GitHub made
 `claude/led-guitar-brief-wrjr81` the default branch. CI keys its deploy off the
 repository's actual default branch rather than a hardcoded name, so renaming it
 in settings would need no code change.
+
+
+## September 26: recovery and output bounds must cover the installed guitar
+
+The review found that safe mode skipped WiFi credentials but still restored
+saved effects; output settings changed before bad bytecode was rejected; and
+post-boot WiFi loss had no AP transition. These paths now have host integration
+tests against the actual firmware orchestration, not only policy helpers.
+
+An understated LED current estimate defeats an estimated current limiter.
+The device now enforces conservative bounds for this guitar independently of
+browser input validation. See [firmware-plan](firmware-plan.md#output-protection-and-recovery)
+for the values and their limitations. Golden-vector profiles retain the general
+engine's unrestricted output model; board policy is checked at the device boundary.
+
+Phone-only assembly replaces the checklist's cable-dependent third-party flash
+step with bounded direct diagnostic patterns in the existing firmware. This keeps
+the known OTA installation intact. It does not establish independent driver
+correctness: count, colour, direction, loaded supply voltage and noise still
+need physical checks.
+
+Battery monitoring is opt-in until a divider is installed and calibrated. Its
+cap latches downward during a boot to avoid voltage-rebound flicker. The sense
+feed must be isolated when the board is off; the enable-only power switch does
+not disconnect the pack. The physical circuit choice remains open.
+
+A resting nonzero switch position was also resetting the effect every frame:
+`requested` kept its startup value, and the physical switch immediately selected
+its own slot again. Requests are now consumed once and the physical switch
+changes slots only when its position changes. Both animation progress and phone
+auditioning are tested with the switch connected in the host fixture.

@@ -3,6 +3,7 @@
 #include <stdint.h>
 
 #include "el_engine.h"
+#include "el_safety.h"
 #include "el_program.h"
 #include "esp_err.h"
 
@@ -16,6 +17,7 @@
 // What a frame actually costs, which until step 5 was an estimate. Reported
 // over /api/status so the question can be asked of a closed guitar.
 typedef struct {
+    uint32_t effect_frame; // advances while the same effect keeps playing
     uint32_t frames;       // rendered since boot
     uint32_t late;         // frames that overran their 16.7 ms slot
     uint32_t last_us;      // the most recent frame
@@ -23,6 +25,10 @@ typedef struct {
     uint32_t avg_us;       // rolling mean
     float current_ma;      // what the output chain thinks the last frame draws
     bool limited;          // whether the current limiter had to pull it back
+    float battery_volts;
+    float battery_scale;
+    bool battery_valid;
+    int diagnostic;
     int slot;              // the five-way position being played, 0..4
     const char *effect;    // its name
     // Why the loop is not running, or NULL when it is. Reported over HTTP
@@ -47,14 +53,13 @@ int app_render_slot_count(void);
 // Replaces the given slots, all or nothing. Every program is decoded and
 // verified first, so a batch with one bad effect in it changes nothing and the
 // guitar keeps playing what it was. Returns false with a reason in `err_out`.
-bool app_render_set_slots(const app_slot_update_t *updates, int count,
+bool app_render_set_slots(const app_slot_update_t *updates, int count, const el_output_t *output,
                           char *err_out, size_t err_max);
 
 // The output chain's settings: brightness ceiling, gamma, and what the supply
 // is trusted to deliver. Safe to change at any time - none of it touches the
 // pixel layout or the LED driver, which is why these travel with the effects
 // and the geometry does not.
-void app_render_set_output(const el_output_t *output);
 void app_render_get_output(el_output_t *out);
 
 esp_err_t app_render_start(void);
@@ -63,3 +68,7 @@ void app_render_stats(app_render_stats_t *out);
 // Switch to the effect in the given slot. Called by the five-way, and by the
 // page when someone auditions an effect from the phone.
 void app_render_select(int slot);
+
+void app_render_set_battery(const el_battery_config_t *config);
+void app_render_get_battery(el_battery_config_t *config);
+void app_render_diagnostic(int mode);

@@ -14,3 +14,6 @@ typedef struct {
 
 esp_err_t app_inputs_init(void);
 void app_inputs_read(app_inputs_t *out);
+
+// Calibrated GPIO2 voltage; the divider ratio is applied by the render task.
+bool app_inputs_battery(float *pin_volts);

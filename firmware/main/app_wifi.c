@@ -12,12 +12,16 @@
 #include "esp_wifi_default.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
+#include "freertos/task.h"
+#include "esp_timer.h"
 #include "mdns.h"
 
 static const char *TAG = "wifi";
 
 #define GOT_IP    BIT0
 #define STA_FAILED BIT1
+#define STATION_ACTIVE BIT2
+#define AP_READY BIT3
 #define STA_ATTEMPTS 5
 
 static EventGroupHandle_t s_events;
@@ -28,9 +32,13 @@ static esp_netif_t *s_sta_netif;
 
 static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
-    if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START) {
+    (void)arg;
+    if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START &&
+        (xEventGroupGetBits(s_events) & STATION_ACTIVE)) {
         esp_wifi_connect();
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
+        xEventGroupClearBits(s_events, GOT_IP);
+        if (!(xEventGroupGetBits(s_events) & STATION_ACTIVE)) return;
         if (s_retries < STA_ATTEMPTS) {
             s_retries++;
             ESP_LOGW(TAG, "station disconnected, retry %d/%d", s_retries, STA_ATTEMPTS);
@@ -39,10 +47,16 @@ static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data)
             xEventGroupSetBits(s_events, STA_FAILED);
         }
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
+        if (!(xEventGroupGetBits(s_events) & STATION_ACTIVE)) return;
         ip_event_got_ip_t *got = (ip_event_got_ip_t *)data;
         s_ip = got->ip_info;
         s_retries = 0;
+        xEventGroupClearBits(s_events, STA_FAILED);
         xEventGroupSetBits(s_events, GOT_IP);
+    } else if (base == IP_EVENT && id == IP_EVENT_STA_LOST_IP) {
+        xEventGroupClearBits(s_events, GOT_IP);
+    } else if (base == WIFI_EVENT && id == WIFI_EVENT_AP_STOP) {
+        xEventGroupClearBits(s_events, AP_READY);
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_AP_STACONNECTED) {
         ESP_LOGI(TAG, "a device joined the fallback access point");
     }
@@ -79,8 +93,35 @@ static esp_err_t start_fallback_ap(void)
     ESP_ERROR_CHECK(esp_wifi_start());
 
     s_mode = APP_WIFI_FALLBACK;
+    xEventGroupSetBits(s_events, AP_READY);
     ESP_LOGI(TAG, "fallback access point \"%s\" is up", ELECTRICLIGHT_AP_SSID);
     return ESP_OK;
+}
+
+// Runs after a successful join, when the boot-time wait has returned. All
+// driver reconfiguration happens here, never in the driver's event callback.
+static void connection_watch(void *arg)
+{
+    (void)arg;
+    int64_t disconnected_at = 0;
+    for (;;) {
+        EventBits_t bits = xEventGroupWaitBits(s_events, STA_FAILED, pdFALSE,
+                                               pdFALSE, pdMS_TO_TICKS(1000));
+        if (bits & GOT_IP) { disconnected_at = 0; continue; }
+        int64_t now = esp_timer_get_time();
+        if (!disconnected_at) disconnected_at = now;
+        if (!(bits & STA_FAILED) && now - disconnected_at < 20000000) continue;
+        ESP_LOGW(TAG, "network lost; starting the guitar access point");
+        xEventGroupClearBits(s_events, STATION_ACTIVE | GOT_IP | STA_FAILED);
+        ESP_ERROR_CHECK(esp_wifi_stop());
+        if (s_sta_netif) {
+            esp_netif_destroy_default_wifi(s_sta_netif);
+            s_sta_netif = NULL;
+        }
+        ESP_ERROR_CHECK(start_fallback_ap());
+        vTaskDelete(NULL);
+        return;
+    }
 }
 
 esp_err_t app_wifi_start(el_radio_mode_t mode)
@@ -100,7 +141,7 @@ esp_err_t app_wifi_start(el_radio_mode_t mode)
     wifi_init_config_t init = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&init));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_event, NULL, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, on_event, NULL, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID, on_event, NULL, NULL));
 
     // Safe mode skips this entirely. Stored credentials are exactly the kind of
     // thing that strands a closed guitar, so the rescue path must not depend on
@@ -110,6 +151,7 @@ esp_err_t app_wifi_start(el_radio_mode_t mode)
     }
 
     if (mode != EL_RADIO_SAFE && cfg->sta_ssid[0]) {
+        xEventGroupSetBits(s_events, STATION_ACTIVE);
         s_sta_netif = esp_netif_create_default_wifi_sta();
         wifi_config_t sta = {0};
         strlcpy((char *)sta.sta.ssid, cfg->sta_ssid, sizeof(sta.sta.ssid));
@@ -124,6 +166,8 @@ esp_err_t app_wifi_start(el_radio_mode_t mode)
         if (bits & GOT_IP) {
             s_mode = APP_WIFI_STATION;
             ESP_LOGI(TAG, "joined %s as " IPSTR, cfg->sta_ssid, IP2STR(&s_ip.ip));
+            if (xTaskCreate(connection_watch, "wifi_watch", 3072, NULL, 4, NULL) != pdPASS)
+                return ESP_ERR_NO_MEM;
             start_mdns();
             return ESP_OK;
         }
@@ -131,6 +175,7 @@ esp_err_t app_wifi_start(el_radio_mode_t mode)
         // Never leave the guitar unreachable because a network moved or a
         // password changed. Fall back rather than sit there retrying.
         ESP_LOGW(TAG, "could not join %s, falling back to our own access point", cfg->sta_ssid);
+        xEventGroupClearBits(s_events, STATION_ACTIVE | GOT_IP | STA_FAILED);
         ESP_ERROR_CHECK(esp_wifi_stop());
         if (s_sta_netif) {
             esp_netif_destroy_default_wifi(s_sta_netif);
@@ -154,7 +199,10 @@ const char *app_wifi_mode_name(void)
     }
 }
 
-bool app_wifi_has_ip(void) { return s_mode != APP_WIFI_DOWN; }
+bool app_wifi_has_ip(void)
+{
+    return s_events && (xEventGroupGetBits(s_events) & (GOT_IP | AP_READY));
+}
 
 void app_wifi_ip_string(char *out, size_t max)
 {

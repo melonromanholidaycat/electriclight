@@ -4,7 +4,7 @@ What has to be true before and during the cabled session, written down while it
 is fresh, because the session is scarce and the cost of arriving with the wrong
 module is a delay measured in weeks.
 
-**Built so far (steps 2 and 3):** an ESP-IDF project in
+**Built so far (steps 2–5):** an ESP-IDF project in
 [`firmware/`](../firmware/) that boots, decides on what terms the radio comes
 up, joins a known network or falls back to its own access point, announces
 itself over mDNS, serves the embedded control page, exposes `/api/status`,
@@ -17,8 +17,9 @@ healthy state, and a log in RTC memory that survives a crash. The decisions are
 plain C in [`../firmware/components/core`](../firmware/components/core) with no
 ESP-IDF in them, and CI compiles and runs them natively on every push.
 
-No LED output and no effect evaluator yet — that is step 4. **832 KB**, which
-leaves 47% of a 4 MB module's app slot free.
+The evaluator and LED output are implemented. The original step-2 image was
+832 KB; current image sizes are reported by the ESP-IDF builds in CI.
+The September 26 corrections are described at the end of this document.
 
 Three things are deliberately provisional and must change before the guitar is
 closed:
@@ -832,12 +833,16 @@ flashed board is reachable from the phone over its own access point.
 
 In order, and the order matters:
 
-1. **Validate the hardware with known-good third-party firmware first** — WLED
-   or similar. Power, wiring, strip type, LED count and direction all get
-   confirmed before any custom code is in the picture. Debugging your own
-   firmware against unverified wiring is the slowest possible loop. This is the
-   one step that puts a cable back in the picture; do it on a board that is not
-   one of the three, or reflash afterwards from the same web page.
+1. **Keep electriclight on the already flashed boards.** Download the 4 MB
+   `electriclight.bin` from Pages into Files while the phone has internet, then
+   join the board and upload it through Setup → Firmware. Reload the page after
+   restart. No desktop, cable flash, bootloader change or third-party image is
+   needed for this session. Setup → Wiring tests supplies direct low-level
+   patterns independent of the effect interpreter: bass red, treble green, a
+   body-to-nut blue chase, low white, and LEDs off. Run these before effects.
+   Both strips should have the measured count in [`hardware/`](hardware/).
+   These checks exercise our driver and physical wiring; they are not an
+   independent third-party certification of the driver.
 2. Check supply voltage **under load**, not at idle, at the far end of the neck.
 3. Confirm both strips independently, and confirm the data direction — index 0
    is expected at the *last fret*, not the nut.
@@ -847,17 +852,19 @@ In order, and the order matters:
 5. **Verify OTA works on the bench, before closing the guitar.** An OTA path
    that has never been exercised is not a path.
 6. Verify safe mode entry by its physical gesture, also before closing.
-7. Run `/api/selftest` from the phone once, so the evaluator is known to agree
+7. Open `http://192.168.4.1/api/selftest` (or the equivalent local hostname)
+   from the phone once, so the evaluator is known to agree
    with the simulator on this silicon before the instrument is trusted on stage.
 
 ## Host-testable core
 
-The effect evaluator (step 4) has to reproduce `web/test/vectors.json` exactly,
-and proving that should not need a device. It will live in a plain C++ component
-with no ESP-IDF dependencies, built twice: into the firmware, and natively on
-the CI runner against the golden vectors. Nothing of it exists yet — the step 2
-firmware is all hardware-facing code, and an empty abstraction would be worse
-than none.
+The evaluator and output chain run against the golden vectors in native C.
+The host suite also builds the actual boot, renderer, effects upload/restore,
+and WiFi lifecycle code with fake ESP services, using the real cJSON parser.
+It checks rejected uploads, recovery boots, persisted output, switch animation,
+phone auditioning, battery caps, and AP fallback after a network disappears.
+Hardware timing, ADC accuracy, radio behaviour and current estimates still need
+the Session B checks.
 
 ## Known issues to handle later
 
@@ -869,3 +876,80 @@ than none.
   effects and presets are never touched.
 - **Appending an opcode is backward compatible for decoding but not for
   execution.** See the refusal requirement above.
+
+
+## September 26 firmware corrections
+
+These supersede the earlier step-2-only status at the top of this plan. Rendering,
+effects, OTA and the embedded controls exist. Hardware validation remains separate.
+
+### Output protection and recovery
+
+The guitar accepts a **50–1500 mA LED budget**, a **60–200 mA full-white estimate
+per LED**, and **1–10 mA idle per LED**. Those are conservative software bounds
+for the presently unmarked tape, not measured current or a replacement for the
+fuse. The simulator's controls use the same lower estimate and upper budget.
+The converter/ESP32 overhead is additional to this LED budget.
+All values must be finite. Every effect is checked before output settings or
+slots change. Uploads contain all five slots and the saved snapshot includes
+all output settings, so a reboot reproduces the accepted state.
+
+Gesture safe mode and boot-loop safe mode both ignore saved effects, output and
+battery configuration. They serve the AP and use built-ins at a low ceiling,
+leaving the saved data intact so a corrected snapshot can replace it from the
+phone. A formerly accepted snapshot outside the new bounds is refused on normal
+boot and logged; send corrected settings from the page to replace it.
+
+WiFi also falls back after a connection is lost during use: after the retry
+limit or roughly 20 seconds without an IP, the guitar starts its AP. Rejoin
+`electriclight` from the phone. Connectivity used for OTA confirmation is based
+on the live IP/AP state; an unreachable pending image takes the rollback path.
+
+### Battery monitoring: software ready, wiring still to validate
+
+GPIO2 now has a calibrated, multisampled ADC reading, taken once per second.
+Monitoring is **disabled by default** because the flashed boards are unwired.
+The Setup page shows an explicitly unverified reading while disabled and lets
+an owner enable monitoring only after checking the divider and meter reading.
+The ESP-IDF calibration API is documented in
+[Espressif's S3 guide](https://docs.espressif.com/projects/esp-idf/en/v5.4/esp32s3/api-reference/peripherals/adc_calibration.html).
+
+The configurable divider ratio is `(Rtop + Rbottom) / Rbottom`; the proposed
+starting ratio is 133/33, corresponding to 100 kΩ and 33 kΩ with 100 nF across
+the lower resistor. **These are a proposed circuit, not installed or measured
+parts.** The physical connection must also isolate the sense feed when the
+ESP32 is unpowered. The present push-pull controls the converter's enable pin,
+so the pack stays live when the board is off. Do not simply connect this divider
+to the permanently live pack: that can feed an unpowered GPIO. Verify whether
+a spare isolated switch pole is available, or design a gated sense feed, before
+soldering the sensing circuit. Never connect the pack directly to GPIO2.
+This physical choice is still open and cannot be settled by a firmware update.
+
+The default proposed thresholds for the six-cell NiMH pack are dimming below
+6.6 V and LEDs off at 6.0 V, configurable from the phone within conservative
+bounds. Between them the linear LED output decreases proportionally. The lowest
+cap is held for the rest of that boot, so the voltage rebound after dimming
+cannot cause repeated bright/dark cycling. Saving battery settings resets the
+cap; power cycling also resets it. An invalid ADC reading while enabled holds
+the LEDs dark. The status page reports voltage, validity and cap.
+
+This is LED load reduction, **not a battery disconnect**. The controller and
+converter still consume power after the LEDs go dark: switch off and recharge.
+On USB alone, leave monitoring disabled. Before relying on it, compare the
+reported pack voltage with a meter under load and verify dimming using a
+controlled test; do not discharge cells deeply merely to test the software.
+
+### Phone wiring diagnostics
+
+The Wiring tests selector sends direct linear RGB frames, with each lit channel
+at most 16/255. Tests obey the output ceiling, current budget and enabled battery
+cap. They bypass the pot and effect formulas so a bad input or effect cannot hide
+a wiring result. The blue chase starts at electrical index 0 on both strips and
+advances toward the nut. Tests end after two minutes, at reboot, or when Normal
+effects is selected; they never overwrite the saved five effects.
+
+Before closing the guitar: exercise every physical switch position and confirm
+its animation keeps moving; push a visibly different effect from the phone,
+power cycle, and verify it survives; test safe mode with the real switch and
+pot. Only then turn off Always enable WiFi if desired. The switch and battery
+circuit have not yet been witnessed on this firmware.

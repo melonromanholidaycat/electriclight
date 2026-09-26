@@ -11,6 +11,7 @@
 // can be reached.
 
 #include "app_config.h"
+#include "el_safety.h"
 #include "app_effects.h"
 #include "app_http.h"
 #include "app_identity.h"
@@ -66,7 +67,7 @@ void app_main(void)
     esp_err_t lit = app_render_start();
     if (lit != ESP_OK) {
         ESP_LOGE(TAG, "the render loop did not start: %s", esp_err_to_name(lit));
-    } else if (app_effects_restore() == ESP_ERR_NOT_FOUND) {
+    } else if (el_restore_allowed(radio) && app_effects_restore() == ESP_ERR_NOT_FOUND) {
         ESP_LOGI(TAG, "no stored effects; playing the built-in five");
     }
 
@@ -82,6 +83,7 @@ void app_main(void)
         app_mode_mark_healthy();
         app_ota_confirm_if_healthy();
     } else {
+        app_ota_confirm_if_healthy(); // pending images must actually roll back here
         ESP_LOGE(TAG, "the radio was meant to be up and is not; leaving this "
                       "boot counted against the rescue threshold");
     }

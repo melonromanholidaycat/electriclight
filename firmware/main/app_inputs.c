@@ -5,6 +5,8 @@
 #include "el_gesture.h"
 #include "esp_adc/adc_oneshot.h"
 #include "esp_log.h"
+#include "esp_adc/adc_cali.h"
+#include "esp_adc/adc_cali_scheme.h"
 
 static const char *TAG = "inputs";
 
@@ -14,6 +16,7 @@ static const int SWITCH_PINS[EL_SWITCH_POSITIONS] = {
 
 static adc_oneshot_unit_handle_t s_adc;
 static bool s_ready;
+static adc_cali_handle_t s_battery_cali;
 
 esp_err_t app_inputs_init(void)
 {
@@ -47,6 +50,13 @@ esp_err_t app_inputs_init(void)
     ESP_ERROR_CHECK(adc_oneshot_config_channel(s_adc, ADC_CHANNEL_0, &chan)); // GPIO1, pot
     ESP_ERROR_CHECK(adc_oneshot_config_channel(s_adc, ADC_CHANNEL_1, &chan)); // GPIO2, battery
 
+    adc_cali_curve_fitting_config_t cali = {
+        .unit_id = ADC_UNIT_1, .chan = ADC_CHANNEL_1,
+        .atten = ADC_ATTEN_DB_12, .bitwidth = ADC_BITWIDTH_DEFAULT,
+    };
+    if (adc_cali_create_scheme_curve_fitting(&cali, &s_battery_cali) != ESP_OK) {
+        ESP_LOGW(TAG, "battery calibration unavailable; enabled monitoring will keep LEDs dark");
+    }
     s_ready = true;
     ESP_LOGI(TAG, "pot on GPIO%d, five-way on GPIO%d-%d",
              PIN_POT, PIN_SWITCH_0, PIN_SWITCH_4);
@@ -94,4 +104,19 @@ void app_inputs_read(app_inputs_t *out)
         out->position = EL_SWITCH_IN_TRANSIT;
         out->switch_fault = true;
     }
+}
+
+
+bool app_inputs_battery(float *volts)
+{
+    if (!s_ready || !s_battery_cali) return false;
+    int total = 0;
+    for (int i = 0; i < 16; i++) {
+        int raw = 0, mv = 0;
+        if (adc_oneshot_read(s_adc, ADC_CHANNEL_1, &raw) != ESP_OK || raw >= 4090 ||
+            adc_cali_raw_to_voltage(s_battery_cali, raw, &mv) != ESP_OK) return false;
+        total += mv;
+    }
+    *volts = (float)total / 16000.0f;
+    return true;
 }

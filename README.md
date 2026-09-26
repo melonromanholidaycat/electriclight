@@ -70,7 +70,8 @@ node web/test/run.js   # language, engine and golden-vector tests, no dependenci
 firmware/test_host/run.sh   # the firmware's C, compiled and run on this machine
 ```
 
-`firmware/test_host/run.sh` needs `node web/build.js` to have run first: the
+`firmware/test_host/run.sh` needs `libcjson-dev` (for the integration tests)
+and `node web/build.js` to have run first: the
 golden vectors are generated into C there, and both the host tests and the
 firmware compile them.
 
@@ -150,10 +151,7 @@ live; the simulator's defaults are held to it by a test.
 
 ## Next
 
-Firmware: boot, serve the page, take an update over the air, survive a bad one,
-then the effect evaluator in C++ checked against `web/test/vectors.json`, then
-live control from the page. Hardware last, because a cabled session is scarce
-and everything before it can be proven green in CI without one.
-
-The numbered sequence is in [`AGENTS.md`](AGENTS.md); what those steps have to
-get right is [`docs/firmware-plan.md`](docs/firmware-plan.md).
+Assembly and validation, using the flashed boards and iPhone. The current
+software fixes and their physical checks are in [`HANDOFF.md`](HANDOFF.md).
+The phone-only assembly checklist and battery sensing requirements are in
+[`docs/firmware-plan.md`](docs/firmware-plan.md#session-b--assemble-and-validate-the-guitar).

@@ -10,8 +10,8 @@ import { findPreset, findDefinition, programFor, resolveValues, LIBRARY_VERSION 
 import { encodeProgram, toBase64 } from '../lang/serialize.js';
 
 // What the firmware understands: compiled bytecode and values, never source.
-// A null slot means "leave that switch position alone", which is how a preset
-// that will not compile avoids taking the whole upload down with it.
+// Compilation problems stop the whole upload. The device requires a complete
+// five-slot snapshot so that restored and live playback agree.
 export function buildEffectsPayload(lib) {
   const problems = [];
   const slots = lib.slots.map((presetId, i) => {
@@ -34,6 +34,8 @@ export function buildEffectsPayload(lib) {
   };
 }
 
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({"&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"}[c]));
+
 const fmtMs = (us) => `${(us / 1000).toFixed(1)} ms`;
 
 function statusHtml(info) {
@@ -44,15 +46,22 @@ function statusHtml(info) {
   const load = r.avgUs ? Math.round((r.avgUs / budget) * 100) : 0;
   const heavy = load > 80;
 
+  const b = info.battery || {};
   const rows = [
-    ['Playing', `${r.effect || '?'} <span class="dim">(position ${(r.slot ?? 0) + 1})</span>`],
+    ['Recovery', info.safeMode ? '<strong>Safe mode: saved effects bypassed</strong>' : 'Normal boot'],
+    ['Battery', b.enabled
+      ? (b.valid ? `${Number(b.volts).toFixed(2)} V; LED cap ${Math.round((b.scale ?? 0) * 100)}%`
+        : '<strong class="bad">No valid reading; LEDs held dark</strong>')
+      : `Monitoring disabled${b.valid ? `; unverified reading ${Number(b.volts).toFixed(2)} V` : ''}`],
+    ['Wiring test', r.diagnostic ? `Mode ${r.diagnostic}; ends automatically after two minutes` : 'Off'],
+    ['Playing', `${escapeHtml(r.effect || '?')} <span class="dim">(position ${(r.slot ?? 0) + 1})</span>`],
     ['Frame', r.avgUs
       ? `${fmtMs(r.avgUs)} average, ${fmtMs(r.worstUs)} worst &mdash; <strong class="${heavy ? 'bad' : 'good'}">${load}%</strong> of the ${fmtMs(budget)} a frame allows`
-      : `<span class="bad">not rendering${r.fault ? `: ${r.fault}` : ''}</span>`],
+      : `<span class="bad">not rendering${r.fault ? `: ${escapeHtml(r.fault)}` : ''}</span>`],
     ['Late frames', `${r.late ?? 0} of ${r.frames ?? 0}`],
     ['Draw', `${Math.round(r.currentMa || 0)} mA${r.limited ? ' <strong class="bad">(limited)</strong>' : ''}`],
     ['Evaluator', st.ran
-      ? `<span class="${st.ok ? 'good' : 'bad'}">${st.summary}</span>`
+      ? `<span class="${st.ok ? 'good' : 'bad'}">${escapeHtml(st.summary)}</span>`
       : '<span class="dim">not checked on this build yet</span>'],
     ['Firmware', `${info.version || '?'} on ${info.slot || '?'}${info.pendingVerify ? ' <span class="bad">(on probation)</span>' : ''}`],
     ['Radio', `${info.wifi || '?'} at ${info.ip || '?'}`],
@@ -134,7 +143,7 @@ export function createDevicePanel(host, app, { onLibraryReplaced }) {
       const body = await res.json().catch(() => ({}));
       if (res.ok && body.ok) {
         say('devOtaStatus', 'Installed. The guitar is restarting; this page will '
-          + 'come back on its own once it has.', 'good');
+          + 'need reconnecting. Reload this page after it returns to load the new controls.', 'good');
       } else {
         say('devOtaStatus', `Refused (${res.status}). The old firmware is still running.`, 'bad');
       }
@@ -173,15 +182,44 @@ export function createDevicePanel(host, app, { onLibraryReplaced }) {
     }
   }
 
+  async function sendSettings(path, value, status) {
+    say(status, 'Sending...');
+    try {
+      const res = await fetch(path, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(value),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      say(status, 'Saved.', 'good');
+      await refresh();
+    } catch (err) { say(status, err.message, 'bad'); }
+  }
+
+  function saveBattery() {
+    const value = {
+      enabled: host.querySelector('#devBatteryEnabled').checked,
+      dividerRatio: Number(host.querySelector('#devBatteryRatio').value),
+      dimVolts: Number(host.querySelector('#devBatteryDim').value),
+      cutoffVolts: Number(host.querySelector('#devBatteryCutoff').value),
+    };
+    if (![value.dividerRatio, value.dimVolts, value.cutoffVolts].every(Number.isFinite)) {
+      say('devBatteryStatus', 'Enter numbers for all three battery settings.', 'bad');
+      return;
+    }
+    sendSettings('api/battery', value, 'devBatteryStatus');
+  }
+
   function render() {
     if (app.context.mode !== 'device') {
-      host.innerHTML = `<h3>The guitar</h3>
+      const battery = app.context.info?.battery || {};
+    host.innerHTML = `<h3>The guitar</h3>
         <p class="note">This page is running as a simulator, so there is nothing to
         control. Open it from the instrument's own network and this becomes the
         control surface &mdash; same page, same effects.</p>`;
       return;
     }
 
+    const battery = app.context.info?.battery || {};
     host.innerHTML = `<h3>The guitar</h3>
       <div id="devStatus"></div>
       <div class="row">
@@ -190,6 +228,38 @@ export function createDevicePanel(host, app, { onLibraryReplaced }) {
       <p id="devPushStatus" class="status"></p>
       <p class="note">Sends the five switch positions as compiled effects, plus the
       output settings below. The guitar keeps them through a power cycle.</p>
+
+      <h3>Wiring tests</h3>
+      <div class="row">
+        <select id="devDiagnostic">
+          <option value="0">Normal effects</option>
+          <option value="1">LEDs off</option>
+          <option value="2">Bass strip red</option>
+          <option value="3">Treble strip green</option>
+          <option value="4">Blue chase, body to nut</option>
+          <option value="5">Both strips, low white</option>
+        </select><button id="devTest">Run test</button>
+      </div><p id="devTestStatus" class="status"></p>
+      <p class="note">Tests use low brightness and end after two minutes. The blue pixel
+      moves along both strips from the body end. Use off, low white and chase to compare
+      pickup noise. Choose Normal effects to stop early. Tests do not replace saved effects.</p>
+
+      <h3>Battery monitoring</h3>
+      <label><input type="checkbox" id="devBatteryEnabled" ${battery.enabled ? 'checked' : ''}>
+        Divider fitted and meter reading checked — enable automatic dimming</label>
+      <div class="field"><label>Divider ratio</label><input type="number" id="devBatteryRatio"
+        min="3.5" max="6" step="0.001" value="${battery.dividerRatio ?? 4.030303}"></div>
+      <div class="field"><label>Start dimming below (V)</label><input type="number" id="devBatteryDim"
+        min="6.2" max="8" step="0.1" value="${battery.dimVolts ?? 6.6}"></div>
+      <div class="field"><label>LEDs off below (V)</label><input type="number" id="devBatteryCutoff"
+        min="6" max="7.8" step="0.1" value="${battery.cutoffVolts ?? 6}"></div>
+      <button id="devBatterySave">Save battery settings</button>
+      <p id="devBatteryStatus" class="status"></p>
+      <p class="note">Leave disabled on a bare board or USB power. The divider must be fitted
+      before enabling: never connect the battery directly to GPIO2. Ratio is
+      (top resistor + bottom resistor) / bottom resistor. Check the displayed voltage
+      against your meter first. Dimming stays latched until a restart or saving these
+      settings again. LEDs going dark does not disconnect the battery: switch off and recharge.</p>
 
       <h3>Firmware</h3>
       <div class="row">
@@ -200,6 +270,14 @@ export function createDevicePanel(host, app, { onLibraryReplaced }) {
       <p class="note">An interrupted upload is discarded and the guitar keeps
       running what it has. A new image that cannot get back on the network rolls
       itself back.</p>
+
+      <h3>Radio at startup</h3>
+      <label><input type="checkbox" id="devRadioAlways" ${app.context.info?.radioAlwaysOn !== false ? 'checked' : ''}>
+        Always enable WiFi</label>
+      <button id="devRadioSave">Save radio setting</button><p id="devRadioStatus" class="status"></p>
+      <p class="note">Keep enabled until the switch is wired and tested. Changes take effect
+      at next startup. With it disabled, sweep the switch from one end to the other during
+      the first five seconds to enable WiFi; start with brightness down for safe mode.</p>
 
       <h3>Network</h3>
       <div class="row">
@@ -215,6 +293,11 @@ export function createDevicePanel(host, app, { onLibraryReplaced }) {
       it stop being two different networks. The guitar restarts to join, and
       falls back to its own access point if it cannot.</p>`;
 
+    host.querySelector('#devBatterySave').addEventListener('click', saveBattery);
+    host.querySelector('#devTest').addEventListener('click', () =>
+      sendSettings('api/diagnostic', { mode: Number(host.querySelector('#devDiagnostic').value) }, 'devTestStatus'));
+    host.querySelector('#devRadioSave').addEventListener('click', () =>
+      sendSettings('api/radio', { alwaysOn: host.querySelector('#devRadioAlways').checked }, 'devRadioStatus'));
     host.querySelector('#devPush').addEventListener('click', push);
     host.querySelector('#devOta').addEventListener('click', () => {
       installFirmware(host.querySelector('#devOtaFile').files[0]);

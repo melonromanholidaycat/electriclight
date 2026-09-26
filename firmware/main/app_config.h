@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "esp_err.h"
+#include "el_safety.h"
 
 // Settings in NVS. Anything tied to physical wiring that might need tuning
 // later belongs here rather than in a compile-time constant, because the guitar
@@ -20,6 +21,7 @@ typedef struct {
     // once the guitar can answer for itself - that is when the brief's "radio
     // off unless deliberately enabled" actually starts holding.
     bool radio_always_on;
+    el_battery_config_t battery;
 
     // How long after start-up the five-way is watched. 0 disables the gesture.
     uint32_t gesture_window_ms;
@@ -35,3 +37,5 @@ esp_err_t app_config_set_wifi(const char *ssid, const char *pass);
 esp_err_t app_config_set_name(const char *name);
 esp_err_t app_config_set_radio_always_on(bool on);
 esp_err_t app_config_set_boot_count(uint8_t count);
+
+esp_err_t app_config_set_battery(const el_battery_config_t *config);

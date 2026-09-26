@@ -1,66 +1,35 @@
 # Handoff
 
-**2026-09-23. Branch `claude/led-guitar-brief-wrjr81`, which is also the default
-branch.**
+**2026-09-26. Branch `claude/led-guitar-brief-wrjr81` is the default branch.**
+Read [`AGENTS.md`](AGENTS.md) for the brief and working relationship.
 
-The only file here that is **rewritten rather than appended to**. It carries
-nothing durable — just where things stand and what is waiting on whom. Anything
-that would still be true in a month belongs in one of the documents
-[`README.md`](README.md) lists, and where this disagrees with one of those, that
-one wins.
+## Current work
 
-**Read [`AGENTS.md`](AGENTS.md) first.** It is the brief and the working
-relationship, and nothing below makes sense without it.
+The September 26 review corrections add validated/atomic effect and output
+uploads, recovery boots that bypass stored effects, battery monitoring with an
+explicit setup control, runtime WiFi fallback, and phone-operated wiring tests.
+They also fix the physical switch restarting animations every frame.
+Implementation and physical limitations:
+[`docs/firmware-plan.md`](docs/firmware-plan.md#september-26-firmware-corrections).
 
----
-
-## Where it stands
-
-**Steps 1–5 of 7 done and verified on hardware.** Step 6 is assembly, which is
-where the owner is now. What each step covered: [`AGENTS.md`](AGENTS.md). What
-the hardware sessions established and what they did not:
-[`docs/firmware-plan.md`](docs/firmware-plan.md), *The two sessions*.
-
-| | |
-|---|---|
-| Three ESP32-S3 boards | flashed, running the image built from `b59b155f` |
-| Everything committed since | **documentation only** — the boards are functionally current |
-| Wired to a guitar | no. Nothing has been connected yet |
+Three boards were flashed previously. The owner reports successful WiFi firmware
+uploads from the iPhone. **No desktop is available.** The new corrections still
+need an OTA upload and physical checks; do not describe them as proven on the
+guitar. Host tests and CI cover software, not solder joints or ADC accuracy.
 
 ## Waiting on the owner
 
-| | |
-|---|---|
-| Ordered | Pololu S13V30F5 converter. Three things to check when it arrives: [`docs/shopping-list.md`](docs/shopping-list.md) |
-| To buy | the rest of [`docs/shopping-list.md`](docs/shopping-list.md) |
-| To do | restore the battery holder to six-in-series — as it stands it is a short hazard, [`docs/hardware/`](docs/hardware/) |
-| Then | Session B in [`docs/firmware-plan.md`](docs/firmware-plan.md). Needs parts and an iron, and no computer |
+- Install the new 4 MB image over WiFi once its CI build is green, then reload
+  the control page. Leave Always enable WiFi on until the physical controls work.
+- Assemble and validate per Session B in the firmware plan. Its obsolete cable
+  step has been replaced with the on-device wiring patterns.
+- Restore the battery holder to six-in-series; parts remain as indexed by
+  [`docs/shopping-list.md`](docs/shopping-list.md). Pololu converter checks remain.
+- **Battery monitoring stays disabled until the sensing circuit is fitted and
+  meter-checked.** Sense-feed isolation with the ESP32 unpowered is still a
+  physical design question; see the firmware plan before wiring GPIO2.
+- Witness saved effects surviving a power cycle, physical safe-mode entry,
+  every switch position animating, pickup noise, and OTA after assembly.
 
-## Open, and where the reasoning is
-
-- Neck geometry cannot be pushed from the page; output settings can — [`docs/decisions.md`](docs/decisions.md)
-- Layering has room for one more layer inside the frame budget — [`docs/decisions.md`](docs/decisions.md)
-- Pushed effects surviving a power cycle is still unwitnessed — [`docs/firmware-plan.md`](docs/firmware-plan.md)
-- The pickup-noise design is written and untested — [`docs/firmware-plan.md`](docs/firmware-plan.md), *Keeping the LEDs out of the pickups*
-
-## Read these before assuming anything
-
-A reading list, not a second home for any of it. Each cost real time, and a
-fresh session will otherwise rediscover them or repeat the advice that caused
-them.
-
-- Estimates of firmware behaviour were wrong three times before measurement
-  settled it — [`docs/decisions.md`](docs/decisions.md), the literal-port and
-  frame-cost entries
-- The page is embedded in the firmware, so a control added to it is unreachable
-  on every board flashed before it — [`docs/firmware-plan.md`](docs/firmware-plan.md),
-  *The update button cannot install itself*
-- A dark board reads as a failed flash, got wrong twice — the default effects and
-  `app_leds_onboard` exist because of it
-- The golden vectors tested the evaluator and not the output chain, so a build
-  with the brightness ceiling on the wrong side of gamma passed —
-  [`docs/decisions.md`](docs/decisions.md), *Golden vectors are the contract*
-- The buck converter spec was wrong in both topology and rating —
-  [`docs/firmware-plan.md`](docs/firmware-plan.md), *Power*
-- Several guards passed for days while protecting nothing. **Break the thing a
-  guard guards and watch it fail, every time.**
+The known geometry limitation and possible layering work remain in
+[`docs/decisions.md`](docs/decisions.md). Audio and orientation remain deferred.

@@ -32,6 +32,8 @@ jobs:
       # no ESP-IDF in them, so the parts that decide whether a closed guitar
       # stays reachable - and the part that has to agree with the browser pixel
       # for pixel - are tested here in seconds rather than on hardware.
+      - name: JSON library for firmware integration tests
+        run: sudo apt-get update -qq && sudo apt-get install -y libcjson-dev
       - name: Firmware core tests, on the host
         run: firmware/test_host/run.sh
       - uses: actions/upload-artifact@v4
