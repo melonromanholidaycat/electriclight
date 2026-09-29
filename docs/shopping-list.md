@@ -80,7 +80,7 @@ the design once already:
 |---|---|---|---|
 | Fuse + inline holder | 1 each | **5 A MINI automotive blade fuse, 32 V DC**; matching insulated inline MINI holder rated at least 5 A DC, with 22 AWG or thicker leads | Install in the pack-positive wire close to the holder; [firmware-plan, Power](firmware-plan.md) |
 | Electrolytic capacitor | 1 | **1000 µF, at least 10 V**, polarized radial electrolytic (16 V is fine if it fits) | Across the common 5 V/GND rail near the two strip inputs |
-| Ceramic capacitors | 2 | **100 nF (0.1 µF), X7R, at least 10 V**, through-hole for hand soldering | One at SN74AHCT125N VCC/GND; one from pot wiper/GPIO1 to LED GND |
+| Ceramic capacitors | 2 | **100 nF (0.1 µF) ceramic, at least 10 V**, through-hole for hand soldering; X5R/X7R is welcome but not required | One at SN74AHCT125N VCC/GND; one from pot wiper/GPIO1 to LED GND |
 
 ### Wiring
 
