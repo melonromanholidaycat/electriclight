@@ -23,6 +23,12 @@ stale.
 | Multimeter | |
 | Soldering iron, solder, flux | assumed, since the guitar has already been apart |
 
+## Ordered, awaiting delivery
+
+| item | qty | spec |
+|---|---|---|
+| Guitar audio volume potentiometer | 1 | B250K; match the old shaft and mounting size. Separate from the A500K LED pot |
+
 ## Still to buy
 
 ### 5 V converter (selected, still to buy)
@@ -90,12 +96,6 @@ the design once already:
 | Resistors | 2 | **330 Ω, 0.25 W, 5%**, through-hole | One per yellow DI line, ideally near its strip input |
 | Perfboard | 1 small piece | **2.54 mm (0.1 in) hole spacing**, large enough for a DIP-14 and wiring | Mount the SN74AHCT125N and its 100 nF bypass capacitor; a suitable DIP-14 breakout board also works |
 | USB-C extension or panel mount | 1 | | routed into the cavity. Insurance now, not workflow: updates go over WiFi, so this is for the day a board will not boot |
-
-### Guitar audio (separate from the LEDs)
-
-| item | qty | spec | why |
-|---|---|---|---|
-| Volume potentiometer | 1 | **B250K**, matching shaft, mounting size and lug layout | Replace the broken guitar audio volume control; separate from the A500K LED brightness/power pot |
 
 ## Deliberately not buying
 
