@@ -21,13 +21,12 @@ stale.
 | Foam tape / standoffs | To mount the board |
 | Heat shrink | Assorted |
 | Multimeter | |
-| Soldering iron, solder, flux | assumed, since the guitar has already been apart |
-
-## Ordered, awaiting delivery
-
-| item | qty | spec |
-|---|---|---|
-| Guitar audio volume potentiometer | 1 | B250K; match the old shaft and mounting size. Separate from the A500K LED pot |
+| Soldering iron and flux | On hand or available for assembly; solder wire listed below to buy |
+| Guitar audio volume potentiometer | B250K; received. Separate from the A500K LED pot |
+| Electrolytic capacitor | Received; verify 1000 µF and at least 10 V before assembly |
+| Ceramic capacitors | Received; verify two 100 nF (0.1 µF), at least 10 V, before assembly |
+| Resistors | Received; verify two 330 Ω, 0.25 W before assembly |
+| JST connectors | Received; optional neck disconnect. Verify six-way mating pair, contact size, and 22 AWG fit before use |
 
 ## Still to buy
 
@@ -79,21 +78,18 @@ the design once already:
 | item | qty | spec | why |
 |---|---|---|---|
 | Fuse + inline holder | 1 each | **5 A MINI automotive blade fuse, 32 V DC**; matching insulated inline MINI holder rated at least 5 A DC, with 22 AWG or thicker leads | Install in the pack-positive wire close to the holder; [firmware-plan, Power](firmware-plan.md) |
-| Electrolytic capacitor | 1 | **1000 µF, at least 10 V**, polarized radial electrolytic (16 V is fine if it fits) | Across the common 5 V/GND rail near the two strip inputs |
-| Ceramic capacitors | 2 | **100 nF (0.1 µF) ceramic, at least 10 V**, through-hole for hand soldering; X5R/X7R is welcome but not required | One at SN74AHCT125N VCC/GND; one from pot wiper/GPIO1 to LED GND |
 
 ### Wiring
 
 | item | qty | spec | why |
 |---|---|---|---|
 | 22 AWG silicone wire | already owned | Use for 5 V, GND **and both data lines**, if it fits the neck channel | No additional 26–28 AWG wire is needed |
-| JST-XH connector, 6-way (optional) | 1 mating pair + contacts | 2.5 mm pitch; confirm contacts match 22 AWG and provide 2 pins each for 5 V/GND | Allows neck removal without desoldering; otherwise solder and strain-relieve the wires |
 
 ### Small parts
 
 | item | qty | spec | why |
 |---|---|---|---|
-| Resistors | 2 | **330 Ω, 0.25 W, 5%**, through-hole | One per yellow DI line, ideally near its strip input |
+| Electronics solder wire | 1 small spool | 0.6–0.8 mm, flux-cored, for electronics (e.g. lead-free SAC305); no acid/plumbing solder | For the remaining joints; confirm you have adequate flux separately |
 | Perfboard | 1 small piece | **2.54 mm (0.1 in) hole spacing**, large enough for a DIP-14 and wiring | Mount the SN74AHCT125N and its 100 nF bypass capacitor; a suitable DIP-14 breakout board also works |
 | USB-C extension or panel mount | 1 | | routed into the cavity. Insurance now, not workflow: updates go over WiFi, so this is for the day a board will not boot |
 
