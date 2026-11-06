@@ -77,7 +77,7 @@ the design once already:
 
 | item | qty | spec | why |
 |---|---|---|---|
-| Fuse + inline holder | 1 each | **5 A MINI automotive blade fuse, 32 V DC**; matching insulated inline MINI holder rated at least 5 A DC, with 22 AWG or thicker leads | Install in the pack-positive wire close to the holder; [firmware-plan, Power](firmware-plan.md) |
+| Compact axial fuse | 1 + 1 spare | **5 A fast-acting axial fuse rated for DC**, e.g. Littelfuse PICO II **0251005.MXL**, 125 V DC; solder-in, no holder | Put in series with the pack-positive lead close to the holder; fully insulate with heat shrink and strain-relieve the leads. If mounted on perfboard, keep the unfused wire short. Replacement requires soldering. [firmware-plan, Power](firmware-plan.md) |
 
 ### Wiring
 
